@@ -227,4 +227,32 @@ class SignalController extends Controller
             'message' => "Signal #{$id} deleted.",
         ]);
     }
+
+    // ── Web (Blade) specific methods ──────────────────────────────
+
+    /**
+     * Bulk signal operations (web route).
+     * POST /admin/signals/bulk
+     */
+    public function bulk(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $request->validate([
+            'action'     => ['required', 'in:delete,expire'],
+            'signal_ids' => ['required', 'array', 'min:1'],
+            'signal_ids.*' => ['integer'],
+        ]);
+
+        $signals = Signal::whereIn('id', $request->signal_ids);
+        $count   = $signals->count();
+
+        match($request->action) {
+            'delete' => $signals->delete(),
+            'expire' => $signals->where('status', 'active')->update([
+                'status'    => 'expired',
+                'closed_at' => now(),
+            ]),
+        };
+
+        return back()->with('success', "Bulk action '{$request->action}' applied to {$count} signal(s).");
+    }
 }

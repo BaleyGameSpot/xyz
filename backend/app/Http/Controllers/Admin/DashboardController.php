@@ -16,9 +16,10 @@ class DashboardController extends Controller
 {
     /**
      * Get dashboard statistics.
-     * GET /api/admin/dashboard
+     * GET /api/admin/dashboard  (JSON)
+     * GET /admin/dashboard      (Blade view)
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse|\Illuminate\View\View
     {
         $now = now();
 
@@ -97,38 +98,42 @@ class DashboardController extends Controller
                 'created_at' => $p->created_at->toISOString(),
             ]);
 
-        return response()->json([
-            'success' => true,
-            'data'    => [
-                'users' => [
-                    'total'            => $totalUsers,
-                    'active'           => $activeUsers,
-                    'blocked'          => $blockedUsers,
-                    'new_today'        => $newUsersToday,
-                    'new_this_month'   => $newUsersThisMonth,
-                    'active_subscriptions' => $activeSubscriptions,
-                    'by_subscription'  => $subscriptionsByType,
-                ],
-                'signals' => [
-                    'total_today'      => $totalSignalsToday,
-                    'active'           => $activeSignals,
-                    'wins_today'       => $winsToday,
-                    'losses_today'     => $lossesToday,
-                    'win_rate_today'   => $winRateToday,
-                    'win_rate_30d'     => $overallWinRate,
-                ],
-                'revenue' => [
-                    'total'            => round($totalRevenue, 2),
-                    'this_month'       => round($revenueThisMonth, 2),
-                    'pending_payments' => $pendingPayments,
-                ],
-                'recent' => [
-                    'signals'  => $recentSignals,
-                    'users'    => $recentUsers,
-                    'payments' => $recentPayments,
-                ],
+        $data = [
+            'users' => [
+                'total'                => $totalUsers,
+                'active'               => $activeUsers,
+                'blocked'              => $blockedUsers,
+                'new_today'            => $newUsersToday,
+                'new_this_month'       => $newUsersThisMonth,
+                'active_subscriptions' => $activeSubscriptions,
+                'by_subscription'      => $subscriptionsByType,
             ],
-        ]);
+            'signals' => [
+                'total_today'    => $totalSignalsToday,
+                'active'         => $activeSignals,
+                'wins_today'     => $winsToday,
+                'losses_today'   => $lossesToday,
+                'win_rate_today' => $winRateToday,
+                'win_rate_30d'   => $overallWinRate,
+            ],
+            'revenue' => [
+                'total'            => round($totalRevenue, 2),
+                'this_month'       => round($revenueThisMonth, 2),
+                'pending_payments' => $pendingPayments,
+            ],
+            'recent' => [
+                'signals'  => $recentSignals,
+                'users'    => $recentUsers,
+                'payments' => $recentPayments,
+            ],
+        ];
+
+        // Return Blade view for web requests, JSON for API requests
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json(['success' => true, 'data' => $data]);
+        }
+
+        return view('admin.dashboard.index', $data);
     }
 
     /**
@@ -174,5 +179,20 @@ class DashboardController extends Controller
             'data'    => $breakdown,
             'meta'    => ['days' => $days],
         ]);
+    }
+
+    // ── Web (Blade) view method ──────────────────────────────────
+
+    /**
+     * Show the admin dashboard Blade view.
+     * This is the web-only version of the dashboard.
+     * Note: The index() method above returns JSON for API requests and
+     * the Blade view for web requests based on the request type.
+     */
+    private function getDashboardData(): array
+    {
+        // This is the shared data-fetching logic; the index() method
+        // already returns JSON. For Blade, we would use the same data.
+        return [];
     }
 }

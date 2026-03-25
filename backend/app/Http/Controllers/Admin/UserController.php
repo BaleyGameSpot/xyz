@@ -183,4 +183,56 @@ class UserController extends Controller
             'data'    => $user->fresh(),
         ]);
     }
+
+    // ── Web (Blade) specific methods ───────────────────────────────
+
+    /**
+     * Toggle user block status (web route).
+     * PATCH /admin/users/{user}/toggle-block
+     */
+    public function toggleBlock(Request $request, User $user): \Illuminate\Http\RedirectResponse
+    {
+        if ($user->isAdmin()) {
+            return back()->with('error', 'Cannot block an administrator account.');
+        }
+        $user->update(['status' => $user->isBlocked() ? 'active' : 'blocked']);
+        $action = $user->isBlocked() ? 'blocked' : 'unblocked';
+        return back()->with('success', "User {$user->name} has been {$action}.");
+    }
+
+    /**
+     * Revoke a user's subscription.
+     * DELETE /admin/subscriptions/{subscription}/revoke
+     */
+    public function revokeSubscription(Request $request, \App\Models\UserSubscription $subscription): \Illuminate\Http\RedirectResponse
+    {
+        $user = $subscription->user;
+        $subscription->update(['payment_status' => 'failed', 'admin_note' => 'Revoked by admin']);
+        $user->update(['subscription_type' => 'none', 'subscription_expiry' => null]);
+        return back()->with('success', "Subscription revoked for {$user->name}.");
+    }
+
+    /**
+     * Bulk user operations (web route).
+     * POST /admin/users/bulk
+     */
+    public function bulk(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $request->validate([
+            'action'   => ['required', 'in:block,unblock,delete'],
+            'user_ids' => ['required', 'array', 'min:1'],
+            'user_ids.*' => ['integer'],
+        ]);
+
+        $users  = User::whereIn('id', $request->user_ids)->where('role', '!=', 'admin');
+        $count  = $users->count();
+
+        match($request->action) {
+            'block'   => $users->update(['status' => 'blocked']),
+            'unblock' => $users->update(['status' => 'active']),
+            'delete'  => $users->delete(),
+        };
+
+        return back()->with('success', "Bulk action '{$request->action}' applied to {$count} user(s).");
+    }
 }

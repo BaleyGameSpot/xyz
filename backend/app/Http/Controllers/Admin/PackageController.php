@@ -226,4 +226,26 @@ class PackageController extends Controller
             'message' => 'Payment rejected.',
         ]);
     }
+
+    // ── Web (Blade) specific methods ──────────────────────────────
+
+    /**
+     * Show package create form (web route).
+     * GET /admin/packages/create
+     */
+    public function create(): \Illuminate\View\View
+    {
+        $timeframes = array_keys(config('trading.timeframes', []));
+        return view('admin.packages.create', compact('timeframes'));
+    }
+
+    /**
+     * Show package edit form (web route).
+     * GET /admin/packages/{package}/edit
+     */
+    public function edit(Package $package): \Illuminate\View\View
+    {
+        $timeframes = array_keys(config('trading.timeframes', []));
+        return view('admin.packages.edit', compact('package', 'timeframes'));
+    }
 }
