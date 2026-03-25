@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class UserSubscription extends Model
 {
@@ -21,16 +20,19 @@ class UserSubscription extends Model
         'transaction_id',
         'amount',
         'currency',
+        'admin_note',
+        'confirmed_by',
+        'confirmed_at',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date'   => 'date',
-        'amount'     => 'float',
+        'start_date'   => 'date',
+        'end_date'     => 'date',
+        'confirmed_at' => 'datetime',
+        'amount'       => 'decimal:2',
     ];
 
-    // --- Relationships ---
-
+    // Relationships
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -41,33 +43,35 @@ class UserSubscription extends Model
         return $this->belongsTo(Package::class);
     }
 
-    public function payment(): HasOne
+    public function confirmedBy(): BelongsTo
     {
-        return $this->hasOne(Payment::class);
+        return $this->belongsTo(User::class, 'confirmed_by');
     }
 
-    // --- Scopes ---
-
-    public function scopeConfirmed($query)
-    {
-        return $query->where('payment_status', 'confirmed');
-    }
-
+    // Scopes
     public function scopeActive($query)
     {
-        return $query->confirmed()->where('end_date', '>=', now()->toDateString());
+        return $query->where('payment_status', 'confirmed')
+            ->where('end_date', '>=', now()->toDateString());
     }
 
-    // --- Helpers ---
+    public function scopePending($query)
+    {
+        return $query->where('payment_status', 'pending');
+    }
 
+    // Helpers
     public function isActive(): bool
     {
         return $this->payment_status === 'confirmed'
             && $this->end_date->isFuture();
     }
 
-    public function isExpired(): bool
+    public function daysRemaining(): int
     {
-        return $this->end_date->isPast();
+        if (! $this->isActive()) {
+            return 0;
+        }
+        return now()->diffInDays($this->end_date);
     }
 }

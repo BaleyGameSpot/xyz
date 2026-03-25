@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer glow circle -->
+    <path
+        android:fillColor="#0D00C853"
+        android:pathData="M54,54m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0" />
+    <!-- Inner circle background -->
+    <path
+        android:fillColor="#161B22"
+        android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
+    <!-- Trading chart line -->
+    <path
+        android:strokeColor="#00C853"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M26,68 L36,54 L44,62 L54,40 L62,50 L72,36 L82,44" />
+    <!-- Key price dots -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M54,40m-3.5,0a3.5,3.5 0,1 1,7 0a3.5,3.5 0,1 1,-7 0" />
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M82,44m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+</vector>

@@ -19,18 +19,23 @@ class Package extends Model
         'daily_signals_limit',
         'timeframes',
         'description',
+        'features',
         'is_active',
+        'sort_order',
     ];
 
     protected $casts = [
-        'timeframes'   => 'array',
-        'price'        => 'float',
-        'promo_price'  => 'float',
-        'is_active'    => 'boolean',
+        'price'               => 'decimal:2',
+        'promo_price'         => 'decimal:2',
+        'timeframes'          => 'array',
+        'features'            => 'array',
+        'is_active'           => 'boolean',
+        'pairs_limit'         => 'integer',
+        'daily_signals_limit' => 'integer',
+        'sort_order'          => 'integer',
     ];
 
-    // --- Relationships ---
-
+    // Relationships
     public function subscriptions(): HasMany
     {
         return $this->hasMany(UserSubscription::class);
@@ -41,21 +46,19 @@ class Package extends Model
         return $this->hasMany(Payment::class);
     }
 
-    // --- Scopes ---
-
+    // Scopes
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('is_active', true)->orderBy('sort_order');
     }
 
-    // --- Helpers ---
-
+    // Helpers
     public function getEffectivePrice(): float
     {
-        return $this->promo_price ?? $this->price;
+        return (float) ($this->promo_price ?? $this->price);
     }
 
-    public function isUnlimitedPairs(): bool
+    public function hasUnlimitedPairs(): bool
     {
         return $this->pairs_limit === null;
     }

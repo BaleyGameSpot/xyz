@@ -23,36 +23,43 @@ class Signal extends Model
         'result_percentage',
         'close_price',
         'closed_at',
+        'expires_at',
+        'notification_sent',
     ];
 
     protected $casts = [
-        'reason'            => 'array',
-        'entry_price'       => 'float',
-        'stop_loss'         => 'float',
-        'take_profit'       => 'float',
-        'result_percentage' => 'float',
-        'close_price'       => 'float',
-        'closed_at'         => 'datetime',
-        'confidence_score'  => 'integer',
+        'entry_price'      => 'decimal:8',
+        'stop_loss'        => 'decimal:8',
+        'take_profit'      => 'decimal:8',
+        'result_percentage' => 'decimal:4',
+        'close_price'      => 'decimal:8',
+        'reason'           => 'array',
+        'closed_at'        => 'datetime',
+        'expires_at'       => 'datetime',
+        'notification_sent' => 'boolean',
+        'confidence_score' => 'integer',
     ];
 
-    // --- Relationships ---
-
+    // Relationships
     public function tradingPair(): BelongsTo
     {
         return $this->belongsTo(TradingPair::class);
     }
 
-    // --- Scopes ---
-
+    // Scopes
     public function scopeActive($query)
     {
-        return $query->whereIn('status', ['pending', 'active']);
+        return $query->where('status', 'active');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
     }
 
     public function scopeToday($query)
     {
-        return $query->whereDate('created_at', now()->toDateString());
+        return $query->whereDate('created_at', today());
     }
 
     public function scopeForPair($query, int $pairId)
@@ -60,77 +67,49 @@ class Signal extends Model
         return $query->where('trading_pair_id', $pairId);
     }
 
-    public function scopeByTimeframe($query, string $timeframe)
+    public function scopeHighConfidence($query, int $minScore = 60)
     {
-        return $query->where('timeframe', $timeframe);
+        return $query->where('confidence_score', '>=', $minScore);
     }
 
-    public function scopeWins($query)
+    // Helpers
+    public function isWin(): bool
     {
-        return $query->where('status', 'win');
+        return $this->status === 'win';
     }
 
-    public function scopeLosses($query)
+    public function isLoss(): bool
     {
-        return $query->where('status', 'loss');
+        return $this->status === 'loss';
     }
 
-    // --- Helpers ---
-
-    public function isOpen(): bool
+    public function isActive(): bool
     {
-        return in_array($this->status, ['pending', 'active'], true);
+        return $this->status === 'active';
+    }
+
+    public function isBuy(): bool
+    {
+        return $this->signal_type === 'BUY';
+    }
+
+    public function isSell(): bool
+    {
+        return $this->signal_type === 'SELL';
     }
 
     public function getRiskRewardRatio(): float
     {
-        $risk   = abs($this->entry_price - $this->stop_loss);
-        $reward = abs($this->take_profit - $this->entry_price);
-
+        $risk   = abs((float) $this->entry_price - (float) $this->stop_loss);
+        $reward = abs((float) $this->take_profit - (float) $this->entry_price);
         if ($risk == 0) {
             return 0;
         }
-
         return round($reward / $risk, 2);
     }
 
-    /**
-     * Calculate current P&L percentage based on current price.
-     */
-    public function calculatePnL(float $currentPrice): float
+    public function getPipsRisk(): float
     {
-        if ($this->entry_price == 0) {
-            return 0;
-        }
-
-        if ($this->signal_type === 'BUY') {
-            return (($currentPrice - $this->entry_price) / $this->entry_price) * 100;
-        }
-
-        return (($this->entry_price - $currentPrice) / $this->entry_price) * 100;
-    }
-
-    /**
-     * Check if stop loss is hit.
-     */
-    public function isStopLossHit(float $currentPrice): bool
-    {
-        if ($this->signal_type === 'BUY') {
-            return $currentPrice <= $this->stop_loss;
-        }
-
-        return $currentPrice >= $this->stop_loss;
-    }
-
-    /**
-     * Check if take profit is hit.
-     */
-    public function isTakeProfitHit(float $currentPrice): bool
-    {
-        if ($this->signal_type === 'BUY') {
-            return $currentPrice >= $this->take_profit;
-        }
-
-        return $currentPrice <= $this->take_profit;
+        return abs((float) $this->entry_price - (float) $this->stop_loss);
     }
 }

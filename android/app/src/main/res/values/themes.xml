@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.ChinarSignals" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent_green</item>
+        <item name="colorPrimaryVariant">@color/accent_green_dark</item>
+        <item name="colorOnPrimary">@color/bg_primary</item>
+        <item name="colorSecondary">@color/accent_gold</item>
+        <item name="colorOnSecondary">@color/bg_primary</item>
+        <item name="android:colorBackground">@color/bg_primary</item>
+        <item name="colorSurface">@color/bg_card</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+        <item name="android:navigationBarColor">@color/bg_primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="materialButtonStyle">@style/Widget.ChinarSignals.Button</item>
+        <item name="textInputStyle">@style/Widget.ChinarSignals.TextInputLayout</item>
+        <item name="chipStyle">@style/Widget.ChinarSignals.Chip</item>
+        <item name="bottomNavigationStyle">@style/Widget.ChinarSignals.BottomNavigation</item>
+    </style>
+
+    <style name="Theme.ChinarSignals.Splash" parent="Theme.ChinarSignals">
+        <item name="android:windowBackground">@drawable/bg_splash</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="Widget.ChinarSignals.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:textColor">@color/bg_primary</item>
+        <item name="backgroundTint">@color/accent_green</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+    </style>
+
+    <style name="Widget.ChinarSignals.Button.Outline" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:textColor">@color/accent_green</item>
+        <item name="strokeColor">@color/accent_green</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+    </style>
+
+    <style name="Widget.ChinarSignals.Button.Red" parent="Widget.MaterialComponents.Button">
+        <item name="android:textColor">@color/white</item>
+        <item name="backgroundTint">@color/accent_red</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <!-- TextInput Styles -->
+    <style name="Widget.ChinarSignals.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/bg_elevated</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_muted</item>
+        <item name="boxBackgroundColor">@color/bg_secondary</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.ChinarSignals.TextInput</item>
+    </style>
+
+    <style name="ShapeAppearance.ChinarSignals.TextInput" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <!-- Chip Style -->
+    <style name="Widget.ChinarSignals.Chip" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="chipBackgroundColor">@color/chip_background_selector</item>
+        <item name="android:textColor">@color/chip_text_selector</item>
+        <item name="chipStrokeColor">@color/bg_elevated</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
+
+    <!-- Bottom Navigation -->
+    <style name="Widget.ChinarSignals.BottomNavigation" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">@color/bg_secondary</item>
+        <item name="itemIconTint">@color/bottom_nav_selector</item>
+        <item name="itemTextColor">@color/bottom_nav_selector</item>
+    </style>
+
+    <!-- Card Style -->
+    <style name="Widget.ChinarSignals.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/bg_card</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <!-- Toolbar -->
+    <style name="Widget.ChinarSignals.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:background">@color/bg_secondary</item>
+        <item name="titleTextColor">@color/text_primary</item>
+        <item name="navigationIconTint">@color/text_primary</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="TextAppearance.ChinarSignals.Heading" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.ChinarSignals.Body" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="TextAppearance.ChinarSignals.Price" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="android:textColor">@color/accent_green</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+</resources>

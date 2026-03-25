@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <!-- Circle background -->
+    <path
+        android:fillColor="#161B22"
+        android:pathData="M60,60m-56,0a56,56 0,1 1,112 0a56,56 0,1 1,-112 0" />
+    <!-- Chart line (trading signal visual) -->
+    <path
+        android:strokeColor="#00C853"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M20,75 L35,60 L45,68 L60,40 L70,52 L85,35 L100,45" />
+    <!-- Gold accent dots -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M60,40m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M85,35m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    <!-- Green accent dots -->
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M35,60m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M100,45m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+</vector>

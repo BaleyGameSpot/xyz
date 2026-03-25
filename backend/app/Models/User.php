@@ -23,6 +23,7 @@ class User extends Authenticatable implements JWTSubject
         'subscription_expiry',
         'status',
         'fcm_token',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -33,12 +34,11 @@ class User extends Authenticatable implements JWTSubject
 
     protected $casts = [
         'email_verified_at'  => 'datetime',
-        'subscription_expiry'=> 'datetime',
+        'subscription_expiry' => 'datetime',
         'password'           => 'hashed',
     ];
 
-    // --- JWT Interface ---
-
+    // JWT Interface methods
     public function getJWTIdentifier(): mixed
     {
         return $this->getKey();
@@ -52,11 +52,15 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    // --- Relationships ---
-
+    // Relationships
     public function subscriptions(): HasMany
     {
         return $this->hasMany(UserSubscription::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function activeSubscription()
@@ -67,23 +71,19 @@ class User extends Authenticatable implements JWTSubject
             ->latest('end_date');
     }
 
-    public function payments(): HasMany
+    // Scopes
+    public function scopeActive($query)
     {
-        return $this->hasMany(Payment::class);
+        return $query->where('status', 'active');
     }
 
-    // --- Accessors / Helpers ---
-
-    public function isAdmin(): bool
+    public function scopeSubscribed($query)
     {
-        return $this->role === 'admin';
+        return $query->where('subscription_type', '!=', 'none')
+            ->where('subscription_expiry', '>=', now());
     }
 
-    public function isActive(): bool
-    {
-        return $this->status === 'active';
-    }
-
+    // Helpers
     public function hasActiveSubscription(): bool
     {
         return $this->subscription_type !== 'none'
@@ -91,36 +91,34 @@ class User extends Authenticatable implements JWTSubject
             && $this->subscription_expiry->isFuture();
     }
 
-    public function getSubscriptionPackage(): string
+    public function isAdmin(): bool
     {
-        if (! $this->hasActiveSubscription()) {
-            return 'none';
-        }
-
-        return $this->subscription_type;
+        return $this->role === 'admin';
     }
 
-    public function canAccessPair(TradingPair $pair): bool
+    public function isBlocked(): bool
     {
-        $packageSlug = $this->getSubscriptionPackage();
-
-        if ($packageSlug === 'none') {
-            return false;
-        }
-
-        $access = $pair->package_access;
-
-        return in_array($packageSlug, $access, true);
+        return $this->status === 'blocked';
     }
 
-    public function getDailySignalLimit(): int
+    public function getAllowedPairsLimit(): ?int
+    {
+        $limits = [
+            'basic'   => 2,
+            'best'    => 5,
+            'premium' => null,
+        ];
+        return $limits[$this->subscription_type] ?? 0;
+    }
+
+    public function getDailySignalsLimit(): int
     {
         $limits = [
             'basic'   => 2,
             'best'    => 4,
             'premium' => 10,
+            'none'    => 0,
         ];
-
         return $limits[$this->subscription_type] ?? 0;
     }
 
@@ -130,8 +128,8 @@ class User extends Authenticatable implements JWTSubject
             'basic'   => ['15m', '30m'],
             'best'    => ['1m', '3m', '5m', '15m', '1h', '4h'],
             'premium' => ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1D'],
+            'none'    => [],
         ];
-
         return $timeframes[$this->subscription_type] ?? [];
     }
 }

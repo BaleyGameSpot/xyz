@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chinar Signals</string>
+    <string name="tagline">Smart Signals. Smart Trading.</string>
+
+    <!-- Auth -->
+    <string name="sign_in">Sign In</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="create_account">Create Account</string>
+    <string name="email_hint">Email Address</string>
+    <string name="password_hint">Password</string>
+    <string name="confirm_password_hint">Confirm Password</string>
+    <string name="name_hint">Full Name</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="already_have_account">Already have an account? </string>
+    <string name="no_account">Don\'t have an account? </string>
+    <string name="login_link">Login</string>
+    <string name="signup_link">Sign Up</string>
+
+    <!-- Nav -->
+    <string name="nav_home">Home</string>
+    <string name="nav_signals">Signals</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Home -->
+    <string name="analyze_trade">ANALYZE TRADE</string>
+    <string name="select_pair">Select Trading Pair</string>
+    <string name="select_timeframe">Select Timeframe</string>
+    <string name="signals_available">Available</string>
+    <string name="signals_used">Used Today</string>
+    <string name="win_rate">Win Rate</string>
+
+    <!-- Signal Detail -->
+    <string name="entry_price">Entry Price</string>
+    <string name="stop_loss">Stop Loss (SL)</string>
+    <string name="take_profit">Take Profit (TP)</string>
+    <string name="risk_reward">Risk/Reward</string>
+    <string name="signal_reason">Signal Analysis</string>
+    <string name="market_structure">Market Structure</string>
+    <string name="order_block">Order Block</string>
+    <string name="fvg">Fair Value Gap (FVG)</string>
+    <string name="mtf_trend">Multi-Timeframe Trend</string>
+    <string name="summary">Summary</string>
+
+    <!-- Packages -->
+    <string name="choose_plan">Choose Your Plan</string>
+    <string name="select_package">Get Started</string>
+    <string name="best_value">BEST VALUE</string>
+    <string name="per_month">/month</string>
+
+    <!-- Payment -->
+    <string name="payment_title">Complete Payment</string>
+    <string name="wallet_address">Wallet Address</string>
+    <string name="copy_address">Copy Address</string>
+    <string name="send_amount">Amount to Send</string>
+    <string name="tx_hash_hint">Enter Transaction Hash (TxID)</string>
+    <string name="submit_payment">I\'ve Sent the Payment</string>
+    <string name="payment_instructions">Send the exact amount to the address below. After sending, paste your transaction hash to confirm.</string>
+
+    <!-- Profile -->
+    <string name="active_subscription">Active Subscription</string>
+    <string name="upgrade_plan">Upgrade Plan</string>
+    <string name="logout">Logout</string>
+    <string name="no_subscription">No Active Subscription</string>
+    <string name="get_subscription">Get a subscription to access trading signals</string>
+
+    <!-- Empty states -->
+    <string name="no_signals">No signals found</string>
+    <string name="no_pairs">No trading pairs available</string>
+</resources>
