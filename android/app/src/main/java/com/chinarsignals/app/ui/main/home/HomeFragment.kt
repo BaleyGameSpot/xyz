@@ -52,7 +52,7 @@ class HomeFragment : Fragment() {
 
     private fun setupHeader() {
         val user = viewModel.getCachedUser()
-        val greeting = "".getGreeting()
+        val greeting = getGreeting()
         binding.tvGreeting.text = if (user != null) "$greeting, ${user.getDisplayName()}!" else "$greeting!"
         binding.tvDate.text = getCurrentDateFormatted()
     }

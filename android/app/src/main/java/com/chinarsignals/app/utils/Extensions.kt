@@ -102,7 +102,7 @@ fun Double.formatRR(): String = String.format("1:%.1f", this)
 
 fun Int.formatConfidence(): String = "$this%"
 
-fun String.getGreeting(): String {
+fun getGreeting(): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     return when {
         hour < 12 -> "Good Morning"
