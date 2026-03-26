@@ -13,21 +13,19 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'package_id',
-        'subscription_id',
         'amount',
-        'currency',
-        'wallet_address',
+        'crypto_type',
         'tx_hash',
         'status',
-        'failure_reason',
-        'metadata',
-        'expires_at',
+        'reject_reason',
+        'reject_note',
+        'verified_by',
+        'verified_at',
     ];
 
     protected $casts = [
-        'amount'     => 'decimal:2',
-        'metadata'   => 'array',
-        'expires_at' => 'datetime',
+        'amount'      => 'decimal:2',
+        'verified_at' => 'datetime',
     ];
 
     // Relationships
@@ -41,9 +39,9 @@ class Payment extends Model
         return $this->belongsTo(Package::class);
     }
 
-    public function subscription(): BelongsTo
+    public function verifiedByAdmin(): BelongsTo
     {
-        return $this->belongsTo(UserSubscription::class, 'subscription_id');
+        return $this->belongsTo(\App\Models\Admin::class, 'verified_by');
     }
 
     // Scopes
@@ -52,18 +50,14 @@ class Payment extends Model
         return $query->where('status', 'pending');
     }
 
-    public function scopeConfirmed($query)
+    public function scopeVerified($query)
     {
-        return $query->where('status', 'confirmed');
+        return $query->where('status', 'verified');
     }
 
-    public function scopeExpired($query)
+    public function scopeRejected($query)
     {
-        return $query->where('status', 'expired')
-            ->orWhere(function ($q) {
-                $q->where('status', 'pending')
-                    ->where('expires_at', '<', now());
-            });
+        return $query->where('status', 'rejected');
     }
 
     // Helpers
@@ -72,14 +66,13 @@ class Payment extends Model
         return $this->status === 'pending';
     }
 
-    public function isConfirmed(): bool
+    public function isVerified(): bool
     {
-        return $this->status === 'confirmed';
+        return $this->status === 'verified';
     }
 
-    public function isExpired(): bool
+    public function isRejected(): bool
     {
-        return $this->status === 'expired'
-            || ($this->status === 'pending' && $this->expires_at && $this->expires_at->isPast());
+        return $this->status === 'rejected';
     }
 }

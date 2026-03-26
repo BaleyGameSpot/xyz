@@ -11,21 +11,22 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('package_id')->constrained()->onDelete('restrict');
-            $table->foreignId('subscription_id')->nullable()->constrained('user_subscriptions')->onDelete('set null');
-            $table->decimal('amount', 10, 2);
-            $table->enum('currency', ['USDT', 'BTC'])->default('USDT');
-            $table->string('wallet_address');
-            $table->string('tx_hash')->nullable()->unique();
-            $table->enum('status', ['pending', 'confirmed', 'failed', 'expired'])->default('pending');
-            $table->text('failure_reason')->nullable();
-            $table->json('metadata')->nullable()->comment('Extra payment data');
-            $table->timestamp('expires_at')->nullable()->comment('Payment window expiry');
+            $table->foreignId('package_id')->constrained()->onDelete('cascade');
+            $table->decimal('amount', 10, 2)->comment('USD equivalent');
+            $table->string('crypto_type', 20)->comment('USDT_TRC20, USDT_ERC20, BTC, ETH, BNB');
+            $table->string('tx_hash')->nullable()->unique()->comment('Blockchain transaction hash');
+            $table->enum('status', ['pending', 'verified', 'rejected'])->default('pending');
+            $table->string('reject_reason', 100)->nullable()->comment('Reason code for rejection');
+            $table->text('reject_note')->nullable()->comment('Admin note to user on rejection');
+            $table->unsignedBigInteger('verified_by')->nullable()->comment('Admin ID who verified');
+            $table->timestamp('verified_at')->nullable();
             $table->timestamps();
 
-            $table->index(['user_id', 'status']);
-            $table->index(['tx_hash']);
-            $table->index(['status', 'expires_at']);
+            $table->index('user_id');
+            $table->index('package_id');
+            $table->index('status');
+            $table->index('created_at');
+            $table->foreign('verified_by')->references('id')->on('admins')->onDelete('set null');
         });
     }
 
