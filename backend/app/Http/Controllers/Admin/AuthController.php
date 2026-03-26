@@ -30,18 +30,12 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        // Use 'web' guard since this is a session-based admin panel
-        if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
-            $user = Auth::guard('web')->user();
+        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
+            $admin = Auth::guard('admin')->user();
 
-            if (! $user->isAdmin()) {
-                Auth::guard('web')->logout();
-                return back()->withErrors(['email' => 'You do not have admin access.']);
-            }
-
-            if ($user->isBlocked()) {
-                Auth::guard('web')->logout();
-                return back()->withErrors(['email' => 'Your account has been suspended.']);
+            if (! $admin->is_active) {
+                Auth::guard('admin')->logout();
+                return back()->withErrors(['email' => 'Your account has been disabled.'])->withInput();
             }
 
             $request->session()->regenerate();
@@ -57,7 +51,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('admin.login');
