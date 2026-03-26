@@ -30,7 +30,7 @@ Route::get('/packages', [SubscriptionController::class, 'packages']);
 | Authenticated Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:api'])->group(function () {
+Route::middleware(['jwt'])->group(function () {
 
     // Auth
     Route::prefix('auth')->group(function () {
