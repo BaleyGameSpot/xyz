@@ -39,14 +39,18 @@ class Kernel extends HttpKernel
      * The application's route middleware aliases.
      */
     protected $middlewareAliases = [
-        'auth'             => \App\Http\Middleware\JwtMiddleware::class,
+        // Laravel standard auth — handles session (web/admin) AND JWT (api)
+        'auth'             => \App\Http\Middleware\Authenticate::class,
         'auth.basic'       => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'guest'            => \Illuminate\Auth\Middleware\RedirectIfAuthenticated::class,
         'bindings'         => \Illuminate\Routing\Middleware\SubstituteBindings::class,
         'cache.headers'    => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can'              => \Illuminate\Auth\Middleware\Authorize::class,
         'throttle'         => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'signed'           => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'verified'         => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        // Custom middleware
+        'jwt'              => \App\Http\Middleware\JwtMiddleware::class,
         'admin'            => \App\Http\Middleware\AdminMiddleware::class,
     ];
 }
