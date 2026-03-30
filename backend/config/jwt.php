@@ -30,7 +30,7 @@ return [
     | JWT hashing algorithm
     |--------------------------------------------------------------------------
     */
-    'algo' => env('JWT_ALGO', Tymon\JWTAuth\Providers\JWT\Lcobucci::class),
+    'algo' => env('JWT_ALGO', 'HS256'),
 
     /*
     |--------------------------------------------------------------------------
