@@ -13,8 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'jwt'   => \App\Http\Middleware\JwtMiddleware::class,
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'jwt'          => \App\Http\Middleware\JwtMiddleware::class,
+            'admin'        => \App\Http\Middleware\AdminMiddleware::class,
+            'admin.auth'   => \App\Http\Middleware\AdminSessionMiddleware::class,
+            'admin.guest'  => \App\Http\Middleware\AdminGuestMiddleware::class,
         ]);
 
         $middleware->statefulApi();

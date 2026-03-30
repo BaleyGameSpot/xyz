@@ -26,13 +26,13 @@ Route::get('/', fn () => redirect()->route('admin.login'));
 Route::prefix('admin')->name('admin.')->group(function () {
 
     // Guest-only (redirects to dashboard if already authenticated)
-    Route::middleware('guest:admin')->group(function () {
+    Route::middleware('admin.guest')->group(function () {
         Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
         Route::post('/login', [AuthController::class, 'login'])->name('login.post');
     });
 
     // Authenticated admin routes
-    Route::middleware(['auth:admin'])->group(function () {
+    Route::middleware(['admin.auth'])->group(function () {
 
         // Logout
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
