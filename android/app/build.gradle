@@ -32,7 +32,7 @@ android {
         }
         debug {
             debuggable true
-            buildConfigField "String", "BASE_URL", '"https://api.chinarsignals.com/"'
+            buildConfigField "String", "BASE_URL", '"http://10.0.2.2/aixyz/backend/public/"'
         }
     }
 
