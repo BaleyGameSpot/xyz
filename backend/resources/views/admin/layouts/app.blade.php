@@ -529,10 +529,10 @@
     <div class="sidebar-footer">
         <div class="admin-info">
             <div class="admin-avatar">
-                {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
+                {{ strtoupper(substr(auth('admin')->user()->name ?? 'A', 0, 1)) }}
             </div>
             <div>
-                <div class="admin-name">{{ auth()->user()->name ?? 'Admin' }}</div>
+                <div class="admin-name">{{ auth('admin')->user()->name ?? 'Admin' }}</div>
                 <div class="admin-role">Super Admin</div>
             </div>
         </div>
@@ -579,10 +579,10 @@
             <!-- Admin badge -->
             <div class="d-none d-md-flex align-items-center gap-2 ps-2">
                 <div class="admin-avatar" style="width:32px;height:32px;font-size:0.75rem;">
-                    {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
+                    {{ strtoupper(substr(auth('admin')->user()->name ?? 'A', 0, 1)) }}
                 </div>
                 <span class="small fw-600" style="color:var(--text-secondary);">
-                    {{ auth()->user()->name ?? 'Admin' }}
+                    {{ auth('admin')->user()->name ?? 'Admin' }}
                 </span>
             </div>
         </div>
