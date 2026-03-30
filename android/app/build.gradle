@@ -70,8 +70,8 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui-ktx:2.7.6'
 
     // Hilt DI
-    implementation 'com.google.dagger:hilt-android:2.50'
-    kapt 'com.google.dagger:hilt-compiler:2.50'
+    implementation 'com.google.dagger:hilt-android:2.51.1'
+    kapt 'com.google.dagger:hilt-compiler:2.51.1'
 
     // Retrofit + OkHttp
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
