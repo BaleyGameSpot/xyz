@@ -36,18 +36,27 @@ class SignalAdapter(
             binding.tvConfidence.text = "${signal.confidenceScore}%"
             binding.progressConfidence.progress = signal.confidenceScore
 
-            // Signal type badge
+            // Signal type badge + left indicator bar
             if (signal.isBuy()) {
                 binding.tvSignalType.text = "BUY"
+                binding.tvSignalType.setTextColor(ContextCompat.getColor(context, R.color.buy_green))
                 binding.tvSignalType.background = ContextCompat.getDrawable(context, R.drawable.badge_buy)
+                binding.viewTypeIndicator.setBackgroundColor(ContextCompat.getColor(context, R.color.buy_green))
                 binding.progressConfidence.progressTintList =
                     ContextCompat.getColorStateList(context, R.color.buy_green)
+                binding.tvConfidence.setTextColor(ContextCompat.getColor(context, R.color.accent_green))
             } else {
                 binding.tvSignalType.text = "SELL"
+                binding.tvSignalType.setTextColor(ContextCompat.getColor(context, R.color.sell_red))
                 binding.tvSignalType.background = ContextCompat.getDrawable(context, R.drawable.badge_sell)
+                binding.viewTypeIndicator.setBackgroundColor(ContextCompat.getColor(context, R.color.sell_red))
                 binding.progressConfidence.progressTintList =
                     ContextCompat.getColorStateList(context, R.color.sell_red)
+                binding.tvConfidence.setTextColor(ContextCompat.getColor(context, R.color.accent_red))
             }
+
+            // Entry price preview
+            binding.tvEntryPreview.text = "Entry  ${signal.entryPrice}"
 
             // Status
             val (statusText, statusColor) = when (signal.status.lowercase()) {

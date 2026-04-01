@@ -14,36 +14,86 @@
         android:orientation="vertical"
         android:paddingBottom="32dp">
 
-        <!-- Header -->
+        <!-- ─── Header ─────────────────────────────────── -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/bg_secondary"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="20dp">
+            android:paddingHorizontal="18dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="18dp">
 
-            <TextView
-                android:id="@+id/tvGreeting"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                tools:text="Good Morning, Ahmed!" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/tvDate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                tools:text="Wednesday, Mar 25 2026" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvGreeting"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/text_primary"
+                        android:textSize="20sp"
+                        tools:text="Good Morning, Ahmed" />
+
+                    <TextView
+                        android:id="@+id/tvDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        tools:text="Wednesday, Apr 1 2026" />
+
+                </LinearLayout>
+
+                <!-- Live indicator -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp">
+
+                    <View
+                        android:layout_width="7dp"
+                        android:layout_height="7dp"
+                        android:background="@drawable/bg_live_dot"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.1"
+                        android:text="LIVE"
+                        android:textColor="@color/accent_green"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Thin gold accent line at bottom of header -->
+            <View
+                android:layout_width="32dp"
+                android:layout_height="2dp"
+                android:layout_marginTop="14dp"
+                android:background="@color/accent_gold" />
+
         </LinearLayout>
 
-        <!-- Subscription Status Card (active) -->
+        <!-- ─── Subscription Status Card ─────────────── -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardSubscription"
             android:layout_width="match_parent"
@@ -52,7 +102,7 @@
             android:layout_marginTop="16dp"
             android:visibility="gone"
             app:cardBackgroundColor="@color/bg_card"
-            app:cardCornerRadius="12dp"
+            app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             tools:visibility="visible">
 
@@ -61,6 +111,13 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+                <!-- Gold top accent -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:layout_marginBottom="14dp"
+                    android:background="@drawable/bg_gold_divider" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -73,22 +130,23 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Active Subscription"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"
+                        android:letterSpacing="0.10"
+                        android:text="ACTIVE SUBSCRIPTION"
                         android:textAllCaps="true"
-                        android:letterSpacing="0.08" />
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
 
                     <TextView
                         android:id="@+id/tvSubscriptionName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/badge_buy"
+                        android:background="@drawable/bg_subscription_card"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="4dp"
-                        android:textColor="@color/accent_green"
-                        android:textSize="12sp"
+                        android:paddingVertical="5dp"
+                        android:textColor="@color/bg_primary"
+                        android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.08"
                         tools:text="PREMIUM" />
                 </LinearLayout>
 
@@ -96,7 +154,7 @@
                     android:id="@+id/tvSubscriptionExpiry"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     tools:text="Expires: Apr 25, 2026" />
@@ -105,16 +163,16 @@
                     android:id="@+id/progressSignals"
                     style="@android:style/Widget.ProgressBar.Horizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="6dp"
-                    android:layout_marginTop="12dp"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="14dp"
                     android:max="100"
                     android:progress="45"
-                    android:progressTint="@color/accent_green"
-                    android:progressBackgroundTint="@color/bg_elevated" />
+                    android:progressTint="@color/accent_gold"
+                    android:progressBackgroundTint="@color/bg_border" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- No Subscription Card -->
+        <!-- ─── No Subscription Card ─────────────────── -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardNoSubscription"
             android:layout_width="match_parent"
@@ -122,10 +180,9 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginTop="16dp"
             android:visibility="gone"
-            app:cardBackgroundColor="#1A00C853"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            tools:visibility="gone">
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -151,8 +208,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Subscribe to access signals"
+                        android:layout_marginTop="3dp"
+                        android:text="Subscribe to access live signals"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
                 </LinearLayout>
@@ -162,144 +219,207 @@
                     android:layout_height="wrap_content"
                     android:text="Subscribe"
                     android:textColor="@color/bg_primary"
-                    android:textSize="13sp"
-                    app:backgroundTint="@color/accent_green"
-                    app:cornerRadius="8dp" />
+                    android:textSize="12sp"
+                    android:letterSpacing="0.08"
+                    app:backgroundTint="@color/accent_gold"
+                    app:cornerRadius="6dp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Today's Stats -->
+        <!-- ─── Today's Stats ─────────────────────────── -->
         <TextView
+            style="@style/TextAppearance.ChinarSignals.SectionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="20dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="TODAY'S STATS"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:letterSpacing="0.1" />
+            android:layout_marginHorizontal="18dp"
+            android:layout_marginTop="22dp"
+            android:text="TODAY'S PERFORMANCE" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <!-- Signals Available -->
-            <LinearLayout
+            <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_stat_card"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:layout_marginEnd="5dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
 
-                <TextView
-                    android:id="@+id/tvSignalsAvailable"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/accent_green"
-                    android:textSize="22sp"
-                    tools:text="8" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/signals_available"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:background="@color/accent_gold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/tvSignalsAvailable"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/accent_green"
+                            android:textSize="24sp"
+                            tools:text="8" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/signals_available"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:gravity="center" />
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <!-- Signals Used -->
-            <LinearLayout
+            <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginHorizontal="3dp"
-                android:background="@drawable/bg_stat_card"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="14dp">
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
 
-                <TextView
-                    android:id="@+id/tvSignalsUsed"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/accent_gold"
-                    android:textSize="22sp"
-                    tools:text="2/10" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/signals_used"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:background="@color/accent_gold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/tvSignalsUsed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/accent_gold"
+                            android:textSize="24sp"
+                            tools:text="2/10" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/signals_used"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:gravity="center" />
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <!-- Win Rate -->
-            <LinearLayout
+            <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:background="@drawable/bg_stat_card"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:layout_marginStart="5dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
 
-                <TextView
-                    android:id="@+id/tvWinRate"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/accent_blue"
-                    android:textSize="22sp"
-                    tools:text="78%" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/win_rate"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-            </LinearLayout>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:background="@color/accent_gold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/tvWinRate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/accent_blue"
+                            android:textSize="24sp"
+                            tools:text="78%" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/win_rate"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:gravity="center" />
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
         </LinearLayout>
 
-        <!-- Pair Selection -->
+        <!-- ─── Pair Selection ─────────────────────────── -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
+            android:layout_marginHorizontal="18dp"
             android:layout_marginTop="24dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <View
+                android:layout_width="3dp"
+                android:layout_height="14dp"
+                android:background="@color/accent_gold"
+                android:layout_marginEnd="8dp" />
+
             <TextView
+                style="@style/TextAppearance.ChinarSignals.SectionLabel"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:fontFamily="sans-serif-medium"
-                android:text="SELECT PAIR"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:letterSpacing="0.1" />
+                android:text="SELECT PAIR" />
 
             <ProgressBar
                 android:id="@+id/pairsProgressBar"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:indeterminateTint="@color/accent_green"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:indeterminateTint="@color/accent_gold"
                 android:visibility="gone" />
+
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
@@ -307,27 +427,38 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="12dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:nestedScrollingEnabled="false"
             tools:itemCount="9"
             tools:listitem="@layout/item_pair" />
 
-        <!-- Timeframe Selection -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- ─── Timeframe Selection ────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="20dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="SELECT TIMEFRAME"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:letterSpacing="0.1" />
+            android:layout_marginHorizontal="18dp"
+            android:layout_marginTop="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="3dp"
+                android:layout_height="14dp"
+                android:background="@color/accent_gold"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                style="@style/TextAppearance.ChinarSignals.SectionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SELECT TIMEFRAME" />
+
+        </LinearLayout>
 
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:paddingHorizontal="16dp"
             android:scrollbars="none">
 
@@ -339,7 +470,7 @@
                 app:selectionRequired="true" />
         </HorizontalScrollView>
 
-        <!-- Analyze Trade Button -->
+        <!-- ─── Analyze Button ────────────────────────── -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -349,23 +480,23 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAnalyzeTrade"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
+                android:layout_height="62dp"
                 android:background="@drawable/bg_analyze_button"
                 android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.15"
+                android:letterSpacing="0.14"
                 android:text="@string/analyze_trade"
                 android:textColor="@color/bg_primary"
                 android:textSize="16sp"
                 app:backgroundTint="@null"
-                app:cornerRadius="12dp"
+                app:cornerRadius="10dp"
                 app:icon="@drawable/ic_signals"
                 app:iconGravity="textStart"
                 app:iconTint="@color/bg_primary" />
 
             <ProgressBar
                 android:id="@+id/analyzeProgress"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
                 android:layout_gravity="center_vertical|end"
                 android:layout_marginEnd="20dp"
                 android:indeterminateTint="@color/bg_primary"

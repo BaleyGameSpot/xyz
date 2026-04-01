@@ -1,30 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark Background -->
-    <color name="bg_primary">#0D1117</color>
-    <color name="bg_secondary">#161B22</color>
-    <color name="bg_card">#21262D</color>
-    <color name="bg_elevated">#30363D</color>
+    <!-- Dark Background — Deep Midnight Navy -->
+    <color name="bg_primary">#080D1A</color>
+    <color name="bg_secondary">#0D1526</color>
+    <color name="bg_card">#111D33</color>
+    <color name="bg_elevated">#192540</color>
+    <color name="bg_border">#1F2E4A</color>
 
-    <!-- Accent Colors -->
-    <color name="accent_green">#00C853</color>
-    <color name="accent_green_dark">#00963E</color>
-    <color name="accent_red">#FF1744</color>
-    <color name="accent_gold">#FFD700</color>
-    <color name="accent_blue">#2979FF</color>
-
-    <!-- Text -->
-    <color name="text_primary">#E6EDF3</color>
-    <color name="text_secondary">#8B949E</color>
-    <color name="text_muted">#484F58</color>
+    <!-- Classic Gold Accents -->
+    <color name="accent_gold">#C9A84C</color>
+    <color name="accent_gold_light">#E4C870</color>
+    <color name="accent_gold_dark">#9A7A30</color>
 
     <!-- Signal Colors -->
-    <color name="buy_green">#00C853</color>
-    <color name="sell_red">#FF1744</color>
-    <color name="neutral_gray">#8B949E</color>
+    <color name="accent_green">#1DB884</color>
+    <color name="accent_green_dark">#0F9066</color>
+    <color name="accent_red">#E84057</color>
+    <color name="accent_red_dark">#BF2037</color>
+    <color name="accent_blue">#4A90D9</color>
 
-    <!-- Status Bar -->
-    <color name="status_bar_color">#0D1117</color>
+    <!-- Text -->
+    <color name="text_primary">#E8EDF7</color>
+    <color name="text_secondary">#7F90A8</color>
+    <color name="text_muted">#3E5070</color>
+    <color name="text_gold">#C9A84C</color>
+
+    <!-- Signal Semantic -->
+    <color name="buy_green">#1DB884</color>
+    <color name="sell_red">#E84057</color>
+    <color name="neutral_gray">#7F90A8</color>
+
+    <!-- Tinted backgrounds -->
+    <color name="buy_bg">#121DB884</color>
+    <color name="sell_bg">#12E84057</color>
+    <color name="gold_bg">#12C9A84C</color>
+
+    <!-- Status bar -->
+    <color name="status_bar_color">#080D1A</color>
 
     <!-- Material defaults -->
     <color name="purple_200">#FFBB86FC</color>

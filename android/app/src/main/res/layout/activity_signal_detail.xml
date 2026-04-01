@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg_primary">
 
+    <!-- AppBar -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -18,6 +19,7 @@
             style="@style/Widget.ChinarSignals.Toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize" />
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <ScrollView
@@ -30,186 +32,239 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
-            android:paddingBottom="32dp">
+            android:paddingBottom="40dp">
 
-            <!-- Main Signal Header Card -->
-            <androidx.cardview.widget.CardView
+            <!-- ─── Hero Signal Card ───────────────────── -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/bg_card"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                app:strokeColor="@color/bg_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="24dp">
+                    android:orientation="vertical">
+
+                    <!-- Gold accent top bar -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:background="@drawable/bg_gold_divider" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:padding="20dp">
 
+                        <!-- Pair + Signal Type row -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/tvPairTimeframe"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="26sp"
+                                    tools:text="EUR/USD" />
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-medium"
+                                        android:letterSpacing="0.08"
+                                        android:textSize="12sp"
+                                        tools:text="PENDING"
+                                        tools:textColor="@color/neutral_gray" />
+
+                                    <View
+                                        android:layout_width="3dp"
+                                        android:layout_height="3dp"
+                                        android:layout_marginHorizontal="8dp"
+                                        android:background="@color/text_muted" />
+
+                                    <TextView
+                                        android:id="@+id/tvCreatedAt"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="12sp"
+                                        tools:text="2h ago" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
 
                             <TextView
-                                android:id="@+id/tvPairTimeframe"
+                                android:id="@+id/tvSignalType"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:letterSpacing="0.10"
+                                android:paddingHorizontal="22dp"
+                                android:paddingVertical="12dp"
+                                android:textSize="18sp"
+                                tools:background="@drawable/badge_buy_large"
+                                tools:text="BUY"
+                                tools:textColor="@color/white" />
+
+                        </LinearLayout>
+
+                        <!-- Divider -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginVertical="20dp"
+                            android:background="@color/bg_border" />
+
+                        <!-- Confidence section label -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="10dp">
+
+                            <View
+                                android:layout_width="3dp"
+                                android:layout_height="14dp"
+                                android:background="@color/accent_gold"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                style="@style/TextAppearance.ChinarSignals.SectionLabel"
+                                android:text="SIGNAL CONFIDENCE" />
+
+                            <TextView
+                                android:id="@+id/tvConfidenceValue"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="sans-serif-medium"
                                 android:textColor="@color/text_primary"
                                 android:textSize="22sp"
-                                tools:text="EUR/USD / 1H" />
+                                tools:text="75%" />
 
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/tvStatus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:textSize="13sp"
-                                    tools:text="PENDING"
-                                    tools:textColor="@color/neutral_gray" />
-
-                                <View
-                                    android:layout_width="4dp"
-                                    android:layout_height="4dp"
-                                    android:layout_marginHorizontal="8dp"
-                                    android:background="@color/text_muted" />
-
-                                <TextView
-                                    android:id="@+id/tvCreatedAt"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="13sp"
-                                    tools:text="2h ago" />
-                            </LinearLayout>
                         </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/tvSignalType"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:paddingHorizontal="20dp"
-                            android:paddingVertical="10dp"
-                            android:textSize="18sp"
-                            tools:background="@drawable/badge_buy_large"
-                            tools:text="BUY"
-                            tools:textColor="@color/bg_primary" />
-                    </LinearLayout>
-
-                    <!-- Confidence Meter -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="CONFIDENCE"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11sp"
-                            android:letterSpacing="0.1" />
 
                         <ProgressBar
                             android:id="@+id/circularProgressConfidence"
                             style="@android:style/Widget.ProgressBar.Horizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="12dp"
-                            android:layout_marginTop="8dp"
+                            android:layout_height="8dp"
                             android:max="100"
                             android:progress="75"
                             android:progressTint="@color/accent_green"
-                            android:progressBackgroundTint="@color/bg_elevated" />
+                            android:progressBackgroundTint="@color/bg_border" />
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
+                        <TextView
+                            android:id="@+id/tvConfidenceLabel"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.08"
+                            android:textSize="13sp"
+                            tools:text="HIGH CONFIDENCE"
+                            tools:textColor="@color/accent_green" />
 
-                            <TextView
-                                android:id="@+id/tvConfidenceValue"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/text_primary"
-                                android:textSize="20sp"
-                                tools:text="75%" />
-
-                            <TextView
-                                android:id="@+id/tvConfidenceLabel"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-medium"
-                                android:textSize="14sp"
-                                tools:text="MEDIUM"
-                                tools:textColor="@color/accent_gold" />
-                        </LinearLayout>
                     </LinearLayout>
-
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Price Levels Card -->
-            <androidx.cardview.widget.CardView
+            <!-- ─── Price Levels Card ──────────────────── -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 app:cardBackgroundColor="@color/bg_card"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                app:strokeColor="@color/bg_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="18dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Section Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="PRICE LEVELS"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.1" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:marginBottom="16dp">
+
+                        <View
+                            android:layout_width="3dp"
+                            android:layout_height="14dp"
+                            android:background="@color/accent_gold"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            style="@style/TextAppearance.ChinarSignals.SectionLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PRICE LEVELS" />
+
+                    </LinearLayout>
 
                     <!-- Entry Price -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="16dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/entry_price"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="2dp"
+                                android:layout_height="2dp"
+                                android:background="@color/text_muted"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/entry_price"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="14sp" />
+
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/tvEntryPrice"
@@ -217,15 +272,15 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:textColor="@color/text_primary"
-                            android:textSize="16sp"
+                            android:textSize="17sp"
                             tools:text="1.08542" />
                     </LinearLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginVertical="10dp"
-                        android:background="@color/bg_elevated" />
+                        android:layout_marginVertical="12dp"
+                        android:background="@color/bg_border" />
 
                     <!-- Stop Loss -->
                     <LinearLayout
@@ -234,20 +289,34 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/stop_loss"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="2dp"
+                                android:layout_height="2dp"
+                                android:background="@color/accent_red"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/stop_loss"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="14sp" />
+
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/tvStopLoss"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
-                            android:textSize="16sp"
+                            android:textSize="17sp"
                             tools:text="1.08200"
                             tools:textColor="@color/accent_red" />
                     </LinearLayout>
@@ -255,8 +324,8 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginVertical="10dp"
-                        android:background="@color/bg_elevated" />
+                        android:layout_marginVertical="12dp"
+                        android:background="@color/bg_border" />
 
                     <!-- Take Profit -->
                     <LinearLayout
@@ -265,20 +334,34 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/take_profit"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="2dp"
+                                android:layout_height="2dp"
+                                android:background="@color/accent_green"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/take_profit"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="14sp" />
+
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/tvTakeProfit"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
-                            android:textSize="16sp"
+                            android:textSize="17sp"
                             tools:text="1.09200"
                             tools:textColor="@color/accent_green" />
                     </LinearLayout>
@@ -286,8 +369,8 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginVertical="10dp"
-                        android:background="@color/bg_elevated" />
+                        android:layout_marginVertical="12dp"
+                        android:background="@color/bg_border" />
 
                     <!-- Risk / Reward -->
                     <LinearLayout
@@ -296,13 +379,27 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/risk_reward"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="2dp"
+                                android:layout_height="2dp"
+                                android:background="@color/accent_gold"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/risk_reward"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="14sp" />
+
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/tvRiskReward"
@@ -310,57 +407,74 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:textColor="@color/accent_gold"
-                            android:textSize="16sp"
-                            tools:text="1:2.0" />
+                            android:textSize="17sp"
+                            tools:text="1 : 2.0" />
                     </LinearLayout>
 
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Signal Reason / Analysis Card -->
-            <androidx.cardview.widget.CardView
+            <!-- ─── Analysis Card ─────────────────────── -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 app:cardBackgroundColor="@color/bg_card"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                app:strokeColor="@color/bg_border"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="18dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Section Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/signal_reason"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.1" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:marginBottom="16dp">
+
+                        <View
+                            android:layout_width="3dp"
+                            android:layout_height="14dp"
+                            android:background="@color/accent_gold"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            style="@style/TextAppearance.ChinarSignals.SectionLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/signal_reason" />
+
+                    </LinearLayout>
 
                     <!-- Market Structure -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="16dp"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/market_structure"
-                            android:textColor="@color/accent_green"
+                            android:textColor="@color/accent_gold"
                             android:textSize="12sp"
-                            android:fontFamily="sans-serif-medium" />
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.06" />
 
                         <TextView
                             android:id="@+id/tvMarketStructure"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingMultiplier="1.4"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             tools:text="Bullish BOS confirmed on H1. Price breaking above previous swing high indicating uptrend continuation." />
@@ -370,7 +484,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="16dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -378,16 +492,18 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/order_block"
-                            android:textColor="@color/accent_green"
+                            android:textColor="@color/accent_gold"
                             android:textSize="12sp"
                             android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.06"
                             android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/tvOrderBlock"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingMultiplier="1.4"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:visibility="gone"
@@ -398,7 +514,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="16dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -406,16 +522,18 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/fvg"
-                            android:textColor="@color/accent_green"
+                            android:textColor="@color/accent_gold"
                             android:textSize="12sp"
                             android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.06"
                             android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/tvFvg"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingMultiplier="1.4"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:visibility="gone"
@@ -426,55 +544,70 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="16dp"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/mtf_trend"
-                            android:textColor="@color/accent_green"
+                            android:textColor="@color/accent_gold"
                             android:textSize="12sp"
-                            android:fontFamily="sans-serif-medium" />
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.06" />
 
                         <TextView
                             android:id="@+id/tvMtfTrend"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingMultiplier="1.4"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
-                            tools:text="H4 bullish, D1 bullish, W1 bullish - aligned buy pressure" />
+                            tools:text="H4 bullish · D1 bullish · W1 bullish — aligned buy pressure" />
                     </LinearLayout>
 
+                    <!-- Summary Divider -->
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginVertical="14dp"
-                        android:background="@color/bg_elevated" />
+                        android:layout_marginVertical="18dp"
+                        android:background="@color/bg_border" />
 
-                    <!-- Summary -->
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Summary label -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/summary"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.1" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:marginBottom="10dp">
+
+                        <View
+                            android:layout_width="3dp"
+                            android:layout_height="14dp"
+                            android:background="@color/accent_gold"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            style="@style/TextAppearance.ChinarSignals.SectionLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/summary" />
+
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvSummary"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:lineSpacingMultiplier="1.4"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingMultiplier="1.6"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
-                        tools:text="Strong bullish setup with confluence from market structure, order block support and MTF alignment. Entry near OB with tight SL for favourable RR." />
+                        tools:text="Strong bullish confluence — market structure BOS, order block support and multi-timeframe alignment confirm entry. Tight SL for favourable R:R." />
 
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Primary gold CTA button (retains filename for compatibility) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <gradient
         android:angle="135"
-        android:endColor="#00963E"
-        android:startColor="#00C853"
+        android:startColor="#E4C870"
+        android:centerColor="#C9A84C"
+        android:endColor="#9A7A30"
         android:type="linear" />
-    <corners android:radius="8dp" />
+    <corners android:radius="6dp" />
 </shape>

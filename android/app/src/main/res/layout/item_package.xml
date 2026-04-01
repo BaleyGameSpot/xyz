@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -7,8 +7,10 @@
     android:layout_height="wrap_content"
     android:layout_marginVertical="8dp"
     app:cardBackgroundColor="@color/bg_card"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="0dp">
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/bg_border"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -21,17 +23,26 @@
             android:id="@+id/tvBestBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="14dp"
             android:background="@drawable/bg_subscription_card"
             android:paddingHorizontal="12dp"
             android:paddingVertical="5dp"
             android:text="BEST VALUE"
             android:textColor="@color/bg_primary"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.1"
+            android:letterSpacing="0.12"
             android:visibility="gone"
             tools:visibility="visible" />
+
+        <!-- Gold top accent line (shown when best value) -->
+        <View
+            android:id="@+id/viewGoldAccent"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginBottom="18dp"
+            android:background="@drawable/bg_gold_divider"
+            android:visibility="gone" />
 
         <!-- Package Name + Price Row -->
         <LinearLayout
@@ -52,7 +63,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:textColor="@color/text_primary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     tools:text="Best Plan" />
 
                 <TextView
@@ -65,6 +76,7 @@
                     tools:text="For serious traders" />
             </LinearLayout>
 
+            <!-- Price column -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -79,7 +91,7 @@
                     android:textSize="13sp"
                     android:paintFlags="16"
                     android:visibility="gone"
-                    tools:text="$49.99/mo"
+                    tools:text="$49.99"
                     tools:visibility="visible" />
 
                 <LinearLayout
@@ -93,25 +105,34 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/accent_green"
-                        android:textSize="22sp"
-                        tools:text="$29.99/mo" />
+                        android:textColor="@color/accent_gold"
+                        android:textSize="26sp"
+                        tools:text="$29.99" />
 
                     <TextView
                         android:id="@+id/tvDiscount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:background="@drawable/badge_buy"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="2dp"
-                        android:textColor="@color/accent_green"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_subscription_card"
+                        android:paddingHorizontal="7dp"
+                        android:paddingVertical="3dp"
+                        android:textColor="@color/bg_primary"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:visibility="gone"
                         tools:text="-40%"
                         tools:visibility="visible" />
                 </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="per month"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp" />
+
             </LinearLayout>
         </LinearLayout>
 
@@ -119,18 +140,18 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginVertical="16dp"
-            android:background="@color/bg_elevated" />
+            android:layout_marginVertical="18dp"
+            android:background="@color/bg_border" />
 
         <!-- Features List -->
         <TextView
             android:id="@+id/tvFeatures"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:lineSpacingMultiplier="1.6"
+            android:lineSpacingMultiplier="1.7"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
-            tools:text="✓ 15 Trading Pairs\n✓ 10 Signals/Day\n✓ Timeframes: 1H, 4H, 1D\n✓ Real-time Notifications" />
+            tools:text="◆  15 Trading Pairs\n◆  10 Signals per Day\n◆  Timeframes: 1H, 4H, 1D\n◆  Real-time Notifications" />
 
         <!-- Select Button -->
         <com.google.android.material.button.MaterialButton
@@ -138,12 +159,14 @@
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:layout_marginTop="20dp"
+            android:background="@drawable/bg_button_green"
             android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.12"
             android:text="@string/select_package"
             android:textColor="@color/bg_primary"
-            android:textSize="15sp"
-            app:backgroundTint="@color/accent_green"
-            app:cornerRadius="8dp" />
+            android:textSize="14sp"
+            app:backgroundTint="@null"
+            app:cornerRadius="6dp" />
 
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

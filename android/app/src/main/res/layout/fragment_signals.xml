@@ -14,23 +14,71 @@
         android:layout_height="wrap_content"
         android:background="@color/bg_secondary"
         android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="18dp"
         android:paddingBottom="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
-            android:text="Trading Signals"
-            android:textColor="@color/text_primary"
-            android:textSize="20sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- Type Filter -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Trading Signals"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-light"
+                    android:letterSpacing="0.15"
+                    android:text="CHINAR ALLINONE"
+                    android:textColor="@color/accent_gold"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
+
+            <!-- Signal count badge -->
+            <TextView
+                android:id="@+id/tvSignalCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_elevated"
+                android:fontFamily="sans-serif-medium"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="5dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:text="12 signals"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Gold accent line -->
+        <View
+            android:layout_width="32dp"
+            android:layout_height="2dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/accent_gold" />
+
+        <!-- Type Filter Chips -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="14dp"
             android:scrollbars="none">
 
             <com.google.android.material.chip.ChipGroup
@@ -41,7 +89,7 @@
                 app:selectionRequired="true" />
         </HorizontalScrollView>
 
-        <!-- Timeframe Filter -->
+        <!-- Timeframe Filter Chips -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -55,6 +103,7 @@
                 app:singleSelection="true"
                 app:selectionRequired="true" />
         </HorizontalScrollView>
+
     </LinearLayout>
 
     <!-- Progress -->
@@ -63,22 +112,38 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="48dp"
-        android:indeterminateTint="@color/accent_green"
+        android:layout_marginTop="52dp"
+        android:indeterminateTint="@color/accent_gold"
         android:visibility="gone" />
 
     <!-- Empty state -->
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/layoutEmpty"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="64dp"
         android:gravity="center"
-        android:text="@string/no_signals"
-        android:textColor="@color/text_secondary"
-        android:textSize="15sp"
-        android:visibility="gone" />
+        android:orientation="vertical"
+        android:paddingTop="64dp"
+        android:paddingHorizontal="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/no_signals"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:background="@color/accent_gold"
+            android:alpha="0.4" />
+
+    </LinearLayout>
 
     <!-- Signals List -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -91,11 +156,12 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:paddingHorizontal="16dp"
-            android:paddingTop="8dp"
+            android:paddingTop="10dp"
             android:paddingBottom="16dp"
             android:clipToPadding="false"
             tools:itemCount="5"
             tools:listitem="@layout/item_signal" />
+
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
 </LinearLayout>

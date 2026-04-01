@@ -1,10 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <gradient
-        android:angle="135"
-        android:endColor="#0D1117"
-        android:centerColor="#111820"
-        android:startColor="#0A0E13"
-        android:type="linear" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Base deep navy -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#080D1A" />
+        </shape>
+    </item>
+    <!-- Radial glow from center — subtle navy highlight -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="55%"
+                android:centerX="0.5"
+                android:centerY="0.44"
+                android:startColor="#140D1526"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+</layer-list>
