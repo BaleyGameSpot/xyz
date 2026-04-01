@@ -220,7 +220,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:marginBottom="16dp">
+                        android:layout_marginBottom="16dp">
 
                         <View
                             android:layout_width="3dp"
@@ -437,7 +437,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:marginBottom="16dp">
+                        android:layout_marginBottom="16dp">
 
                         <View
                             android:layout_width="3dp"
@@ -580,7 +580,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:marginBottom="10dp">
+                        android:layout_marginBottom="10dp">
 
                         <View
                             android:layout_width="3dp"

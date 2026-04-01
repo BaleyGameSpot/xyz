@@ -38,7 +38,7 @@
         <item name="android:paddingTop">15dp</item>
         <item name="android:paddingBottom">15dp</item>
         <item name="elevation">0dp</item>
-        <item name="stateListAnimator">@null</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="Widget.ChinarSignals.Button.Green" parent="Widget.MaterialComponents.Button">
@@ -49,7 +49,7 @@
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="cornerRadius">6dp</item>
         <item name="elevation">0dp</item>
-        <item name="stateListAnimator">@null</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="Widget.ChinarSignals.Button.Outline" parent="Widget.MaterialComponents.Button.OutlinedButton">
@@ -67,7 +67,7 @@
         <item name="backgroundTint">@color/accent_red</item>
         <item name="cornerRadius">6dp</item>
         <item name="elevation">0dp</item>
-        <item name="stateListAnimator">@null</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <!-- ═══════════════════════ TEXT INPUT ═══════════════════════ -->
@@ -108,12 +108,6 @@
         <item name="android:background">@color/bg_secondary</item>
         <item name="itemIconTint">@color/bottom_nav_selector</item>
         <item name="itemTextColor">@color/bottom_nav_selector</item>
-        <item name="itemActiveIndicatorStyle">@style/Widget.ChinarSignals.BottomNavActiveIndicator</item>
-    </style>
-
-    <style name="Widget.ChinarSignals.BottomNavActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/gold_bg</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.M3.Comp.NavigationBar.ActiveIndicator.Shape</item>
     </style>
 
     <!-- ═══════════════════════ CARD ═══════════════════════ -->
