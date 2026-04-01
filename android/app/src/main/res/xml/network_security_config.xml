@@ -2,9 +2,10 @@
 <network-security-config>
     <!-- Allow cleartext for local development (emulator + LAN) -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain>      <!-- Android emulator localhost -->
-        <domain includeSubdomains="true">10.0.3.2</domain>      <!-- Genymotion localhost -->
-        <domain includeSubdomains="true">192.168.1.0</domain>   <!-- LAN - update to your IP -->
+        <domain includeSubdomains="true">10.0.2.2</domain>         <!-- Android emulator localhost -->
+        <domain includeSubdomains="true">10.0.3.2</domain>         <!-- Genymotion localhost -->
+        <domain includeSubdomains="true">192.168.1.0</domain>      <!-- LAN subnet 1 -->
+        <domain includeSubdomains="true">192.168.100.112</domain>  <!-- XAMPP server IP -->
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
