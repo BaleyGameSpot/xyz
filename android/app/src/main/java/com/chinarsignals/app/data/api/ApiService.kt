@@ -19,6 +19,9 @@ interface ApiService {
     @GET("api/auth/me")
     suspend fun getMe(): Response<ApiResponse<User>>
 
+    @POST("api/auth/refresh")
+    suspend fun refreshToken(): Response<ApiResponse<AuthResponse>>
+
     // ─── Pairs ──────────────────────────────────────────────────────────────
     @GET("api/pairs")
     suspend fun getPairs(): Response<ApiResponse<List<TradingPair>>>

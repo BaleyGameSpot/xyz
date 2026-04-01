@@ -3,6 +3,7 @@ package com.chinarsignals.app.di
 import com.chinarsignals.app.data.api.ApiClient
 import com.chinarsignals.app.data.api.ApiService
 import com.chinarsignals.app.data.api.AuthInterceptor
+import com.chinarsignals.app.data.api.TokenAuthenticator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,8 +18,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient =
-        ApiClient.provideOkHttpClient(authInterceptor)
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
+    ): OkHttpClient =
+        ApiClient.provideOkHttpClient(authInterceptor, tokenAuthenticator)
 
     @Provides
     @Singleton
