@@ -12,16 +12,21 @@ class PackageController extends Controller
 {
     /**
      * List all packages.
-     * GET /api/admin/packages
+     * GET /api/admin/packages  (JSON)
+     * GET /admin/packages      (Blade view)
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse|\Illuminate\View\View
     {
         $packages = Package::withCount('subscriptions')->orderBy('sort_order')->get();
 
-        return response()->json([
-            'success' => true,
-            'data'    => $packages,
-        ]);
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'data'    => $packages,
+            ]);
+        }
+
+        return view('admin.packages.index', compact('packages'));
     }
 
     /**
@@ -62,6 +67,10 @@ class PackageController extends Controller
 
         $package = Package::create($validated);
 
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
+            return redirect()->route('admin.packages.index')->with('success', 'Package created successfully.');
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Package created successfully.',
@@ -71,11 +80,10 @@ class PackageController extends Controller
 
     /**
      * Update a package.
-     * PUT /api/admin/packages/{id}
+     * PUT /api/admin/packages/{package}
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, Package $package): JsonResponse|\Illuminate\Http\RedirectResponse
     {
-        $package = Package::findOrFail($id);
 
         $validated = $request->validate([
             'name'                => ['sometimes', 'string', 'max:100'],
@@ -94,6 +102,10 @@ class PackageController extends Controller
 
         $package->update($validated);
 
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
+            return redirect()->route('admin.packages.index')->with('success', 'Package updated successfully.');
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Package updated successfully.',
@@ -103,42 +115,48 @@ class PackageController extends Controller
 
     /**
      * Toggle package active status.
-     * POST /api/admin/packages/{id}/toggle
+     * PATCH /api/admin/packages/{id}/toggle  (JSON)
+     * PATCH /admin/packages/{package}/toggle (web — redirect)
      */
-    public function toggle(int $id): JsonResponse
+    public function toggle(Request $request, Package $package): JsonResponse|\Illuminate\Http\RedirectResponse
     {
-        $package    = Package::findOrFail($id);
-        $newStatus  = ! $package->is_active;
+        $newStatus = ! $package->is_active;
         $package->update(['is_active' => $newStatus]);
+        $msg = "Package is now " . ($newStatus ? 'active' : 'inactive') . ".";
+
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
+            return back()->with('success', $msg);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => "Package is now " . ($newStatus ? 'active' : 'inactive') . ".",
+            'message' => $msg,
             'data'    => ['is_active' => $newStatus],
         ]);
     }
 
     /**
      * Delete a package (only if no active subscriptions).
-     * DELETE /api/admin/packages/{id}
+     * DELETE /api/admin/packages/{id}      (JSON)
+     * DELETE /admin/packages/{package}     (web — redirect)
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, Package $package): JsonResponse|\Illuminate\Http\RedirectResponse
     {
-        $package = Package::findOrFail($id);
-
-        $activeSubscriptions = $package->subscriptions()
-            ->where('payment_status', 'confirmed')
-            ->where('end_date', '>=', now()->toDateString())
-            ->count();
+        $activeSubscriptions = $package->activeSubscriptions()->count();
 
         if ($activeSubscriptions > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => "Cannot delete package with {$activeSubscriptions} active subscription(s). Deactivate it instead.",
-            ], 422);
+            $msg = "Cannot delete package with {$activeSubscriptions} active subscription(s). Deactivate it instead.";
+            if (! $request->expectsJson() && ! $request->is('api/*')) {
+                return back()->with('error', $msg);
+            }
+            return response()->json(['success' => false, 'message' => $msg], 422);
         }
 
         $package->delete();
+
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
+            return redirect()->route('admin.packages.index')->with('success', 'Package deleted successfully.');
+        }
 
         return response()->json([
             'success' => true,

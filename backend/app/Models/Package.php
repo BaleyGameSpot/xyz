@@ -46,6 +46,13 @@ class Package extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function activeSubscriptions(): HasMany
+    {
+        return $this->hasMany(UserSubscription::class)
+            ->where('payment_status', 'confirmed')
+            ->where('end_date', '>=', now()->toDateString());
+    }
+
     // Scopes
     public function scopeActive($query)
     {

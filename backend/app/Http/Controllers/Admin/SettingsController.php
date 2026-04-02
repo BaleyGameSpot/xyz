@@ -18,16 +18,42 @@ class SettingsController extends Controller
     public function index(): View
     {
         $settings = [
-            'app_name'                => config('app.name'),
-            'binance_wallet_usdt'     => config('trading.payment.wallets.USDT'),
-            'binance_wallet_btc'      => config('trading.payment.wallets.BTC'),
-            'min_confidence'          => config('trading.signals.min_confidence'),
-            'atr_multiplier'          => config('trading.signals.atr_sl_multiplier'),
-            'risk_reward'             => config('trading.signals.risk_reward_ratio'),
-            'signal_expiry_hours'     => config('trading.signals.expiry_hours'),
-            'alpha_vantage_key_set'   => ! empty(config('trading.alpha_vantage.api_key')) && config('trading.alpha_vantage.api_key') !== 'demo',
-            'twelve_data_key_set'     => ! empty(config('trading.twelve_data.api_key')) && config('trading.twelve_data.api_key') !== 'demo',
-            'fcm_key_set'             => ! empty(config('trading.fcm.server_key')),
+            // General
+            'app_name'          => config('app.name'),
+            'support_email'     => env('APP_SUPPORT_EMAIL', ''),
+            'telegram_channel'  => env('TELEGRAM_CHANNEL', ''),
+            'maintenance_mode'  => (bool) env('MAINTENANCE_MODE', false),
+
+            // Wallet addresses
+            'wallet_usdt_trc20' => env('BINANCE_PAYMENT_WALLET_USDT', ''),
+            'wallet_usdt_erc20' => env('WALLET_USDT_ERC20', ''),
+            'wallet_btc'        => env('BINANCE_PAYMENT_WALLET_BTC', ''),
+            'wallet_eth'        => env('WALLET_ETH', ''),
+            'wallet_bnb'        => env('WALLET_BNB', ''),
+
+            // Signal settings
+            'min_confidence'      => config('trading.signals.min_confidence', 60),
+            'max_daily_signals'   => (int) env('MAX_DAILY_SIGNALS', 20),
+            'active_pairs'        => env('ACTIVE_PAIRS', ''),
+            'cron_schedule'       => env('SIGNAL_CRON_SCHEDULE', '*/15 * * * *'),
+            'signals_enabled'     => (bool) env('SIGNALS_ENABLED', true),
+            'auto_close_signals'  => (bool) env('AUTO_CLOSE_SIGNALS', false),
+            'atr_multiplier'      => config('trading.signals.atr_sl_multiplier'),
+            'risk_reward'         => config('trading.signals.risk_reward_ratio'),
+            'signal_expiry_hours' => config('trading.signals.expiry_hours'),
+
+            // Notifications
+            'firebase_server_key'       => env('FCM_SERVER_KEY', ''),
+            'firebase_project_id'       => env('FIREBASE_PROJECT_ID', ''),
+            'notify_new_signal'         => (bool) env('NOTIFY_NEW_SIGNAL', true),
+            'notify_signal_result'      => (bool) env('NOTIFY_SIGNAL_RESULT', true),
+            'notify_payment_verified'   => (bool) env('NOTIFY_PAYMENT_VERIFIED', true),
+
+            // Security
+            'jwt_secret_preview' => env('JWT_SECRET') ? substr(env('JWT_SECRET'), 0, 8) . '…' : '(not set)',
+            'alpha_vantage_key_set' => ! empty(config('trading.alpha_vantage.api_key')) && config('trading.alpha_vantage.api_key') !== 'demo',
+            'twelve_data_key_set'   => ! empty(config('trading.twelve_data.api_key')) && config('trading.twelve_data.api_key') !== 'demo',
+            'fcm_key_set'           => ! empty(env('FCM_SERVER_KEY')),
         ];
 
         return view('admin.settings.index', compact('settings'));
@@ -39,19 +65,81 @@ class SettingsController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'min_confidence'      => ['required', 'integer', 'min:10', 'max:90'],
-            'atr_multiplier'      => ['required', 'numeric', 'min:0.5', 'max:5'],
-            'risk_reward'         => ['required', 'numeric', 'min:1', 'max:10'],
-            'signal_expiry_hours' => ['required', 'integer', 'min:1', 'max:168'],
-        ]);
+        $section = $request->input('section', 'signals');
 
-        $this->updateEnvFile([
-            'SIGNAL_MIN_CONFIDENCE' => $validated['min_confidence'],
-            'ATR_SL_MULTIPLIER'     => $validated['atr_multiplier'],
-            'RISK_REWARD_RATIO'     => $validated['risk_reward'],
-            'SIGNAL_EXPIRY_HOURS'   => $validated['signal_expiry_hours'],
-        ]);
+        switch ($section) {
+
+            case 'general':
+                $validated = $request->validate([
+                    'app_name'         => ['required', 'string', 'max:100'],
+                    'support_email'    => ['nullable', 'email'],
+                    'telegram_channel' => ['nullable', 'string', 'max:100'],
+                    'maintenance_mode' => ['nullable'],
+                ]);
+                $this->updateEnvFile([
+                    'APP_NAME'          => '"' . ($validated['app_name'] ?? 'Chinar Signals') . '"',
+                    'APP_SUPPORT_EMAIL' => $validated['support_email'] ?? '',
+                    'TELEGRAM_CHANNEL'  => $validated['telegram_channel'] ?? '',
+                    'MAINTENANCE_MODE'  => $request->boolean('maintenance_mode') ? 'true' : 'false',
+                ]);
+                break;
+
+            case 'wallets':
+                $validated = $request->validate([
+                    'wallet_usdt_trc20' => ['nullable', 'string', 'max:255'],
+                    'wallet_usdt_erc20' => ['nullable', 'string', 'max:255'],
+                    'wallet_btc'        => ['nullable', 'string', 'max:255'],
+                    'wallet_eth'        => ['nullable', 'string', 'max:255'],
+                    'wallet_bnb'        => ['nullable', 'string', 'max:255'],
+                ]);
+                $this->updateEnvFile([
+                    'BINANCE_PAYMENT_WALLET_USDT' => $validated['wallet_usdt_trc20'] ?? '',
+                    'WALLET_USDT_ERC20'           => $validated['wallet_usdt_erc20'] ?? '',
+                    'BINANCE_PAYMENT_WALLET_BTC'  => $validated['wallet_btc'] ?? '',
+                    'WALLET_ETH'                  => $validated['wallet_eth'] ?? '',
+                    'WALLET_BNB'                  => $validated['wallet_bnb'] ?? '',
+                ]);
+                break;
+
+            case 'signals':
+                $validated = $request->validate([
+                    'min_confidence'     => ['required', 'integer', 'min:0', 'max:100'],
+                    'max_daily_signals'  => ['required', 'integer', 'min:1', 'max:500'],
+                    'active_pairs'       => ['nullable', 'string'],
+                    'cron_schedule'      => ['nullable', 'string', 'max:100'],
+                    'signals_enabled'    => ['nullable'],
+                    'auto_close_signals' => ['nullable'],
+                ]);
+                $this->updateEnvFile([
+                    'SIGNAL_MIN_CONFIDENCE' => $validated['min_confidence'],
+                    'MAX_DAILY_SIGNALS'     => $validated['max_daily_signals'],
+                    'ACTIVE_PAIRS'          => $validated['active_pairs'] ?? '',
+                    'SIGNAL_CRON_SCHEDULE'  => $validated['cron_schedule'] ?? '*/15 * * * *',
+                    'SIGNALS_ENABLED'       => $request->boolean('signals_enabled') ? 'true' : 'false',
+                    'AUTO_CLOSE_SIGNALS'    => $request->boolean('auto_close_signals') ? 'true' : 'false',
+                ]);
+                break;
+
+            case 'notifications':
+                $validated = $request->validate([
+                    'firebase_server_key'     => ['nullable', 'string'],
+                    'firebase_project_id'     => ['nullable', 'string', 'max:100'],
+                    'notify_new_signal'       => ['nullable'],
+                    'notify_signal_result'    => ['nullable'],
+                    'notify_payment_verified' => ['nullable'],
+                ]);
+                $this->updateEnvFile([
+                    'FCM_SERVER_KEY'          => $validated['firebase_server_key'] ?? '',
+                    'FIREBASE_PROJECT_ID'     => $validated['firebase_project_id'] ?? '',
+                    'NOTIFY_NEW_SIGNAL'       => $request->boolean('notify_new_signal') ? 'true' : 'false',
+                    'NOTIFY_SIGNAL_RESULT'    => $request->boolean('notify_signal_result') ? 'true' : 'false',
+                    'NOTIFY_PAYMENT_VERIFIED' => $request->boolean('notify_payment_verified') ? 'true' : 'false',
+                ]);
+                break;
+
+            default:
+                return back()->with('error', 'Unknown settings section.');
+        }
 
         return back()->with('success', 'Settings updated successfully.');
     }
@@ -67,7 +155,11 @@ class SettingsController extends Controller
             'password'         => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $user = $request->user();
+        $user = auth('admin')->user();
+
+        if (! $user) {
+            return back()->withErrors(['current_password' => 'Not authenticated.']);
+        }
 
         if (! Hash::check($request->current_password, $user->password)) {
             return back()->withErrors(['current_password' => 'Current password is incorrect.']);
@@ -84,7 +176,7 @@ class SettingsController extends Controller
      */
     public function testNotification(Request $request, FcmService $fcmService): RedirectResponse
     {
-        $user = $request->user();
+        $user = auth('admin')->user();
 
         if (empty($user->fcm_token)) {
             return back()->with('error', 'No FCM token found for your account. Please set it via the mobile app.');
@@ -109,10 +201,6 @@ class SettingsController extends Controller
      */
     public function regenerateToken(Request $request): RedirectResponse
     {
-        $request->validate([
-            'confirm' => ['required', 'in:CONFIRM'],
-        ]);
-
         \Illuminate\Support\Facades\Artisan::call('jwt:secret', ['--force' => true]);
 
         return back()->with('success', 'JWT secret regenerated. All users have been logged out.');

@@ -74,4 +74,10 @@ class UserSubscription extends Model
         }
         return now()->diffInDays($this->end_date);
     }
+
+    // Alias so blade can use $subscription->expires_at
+    public function getExpiresAtAttribute()
+    {
+        return $this->end_date;
+    }
 }

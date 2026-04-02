@@ -101,6 +101,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->status === 'blocked';
     }
 
+    public function getIsBlockedAttribute(): bool
+    {
+        return $this->status === 'blocked';
+    }
+
     public function getAllowedPairsLimit(): ?int
     {
         $limits = [

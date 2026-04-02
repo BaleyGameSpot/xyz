@@ -23,117 +23,136 @@ class DashboardController extends Controller
     {
         $now = now();
 
-        // User stats
-        $totalUsers         = User::count();
-        $activeUsers        = User::active()->count();
-        $blockedUsers       = User::where('status', 'blocked')->count();
-        $newUsersToday      = User::whereDate('created_at', today())->count();
-        $newUsersThisMonth  = User::whereMonth('created_at', $now->month)
-            ->whereYear('created_at', $now->year)
+        // ── User stats ────────────────────────────────────────────
+        $totalUsers        = User::count();
+        $activeUsers       = User::where('status', 'active')->count();
+        $blockedUsers      = User::where('status', 'blocked')->count();
+        $newUsersToday     = User::whereDate('created_at', today())->count();
+        $newUsersThisMonth = User::whereMonth('created_at', $now->month)
+            ->whereYear('created_at', $now->year)->count();
+        $newUsersWeek      = User::where('created_at', '>=', $now->copy()->subDays(7))->count();
+
+        // ── Subscription stats ────────────────────────────────────
+        $activeSubscriptions = UserSubscription::where('payment_status', 'confirmed')
+            ->where('end_date', '>=', today()->toDateString())
             ->count();
 
-        // Subscription stats
-        $activeSubscriptions = User::where('subscription_type', '!=', 'none')
-            ->where('subscription_expiry', '>=', $now)
-            ->count();
-
-        $subscriptionsByType = User::where('subscription_type', '!=', 'none')
-            ->where('subscription_expiry', '>=', $now)
-            ->selectRaw('subscription_type, COUNT(*) as count')
-            ->groupBy('subscription_type')
-            ->pluck('count', 'subscription_type')
-            ->toArray();
-
-        // Signal stats
+        // ── Signal stats ──────────────────────────────────────────
         $totalSignalsToday = Signal::whereDate('created_at', today())->count();
-        $activeSignals     = Signal::where('status', 'active')->count();
-        $winsToday         = Signal::where('status', 'win')->whereDate('closed_at', today())->count();
-        $lossesToday       = Signal::where('status', 'loss')->whereDate('closed_at', today())->count();
-        $closedToday       = $winsToday + $lossesToday;
-        $winRateToday      = $closedToday > 0 ? round(($winsToday / $closedToday) * 100, 1) : 0;
+        $signalsPending    = Signal::where('status', 'pending')->count();
+        $totalWins         = Signal::where('status', 'win')->count();
+        $totalLosses       = Signal::where('status', 'loss')->count();
+        $totalClosed       = $totalWins + $totalLosses;
+        $winRate           = $totalClosed > 0 ? round(($totalWins / $totalClosed) * 100, 1) : 0;
 
-        // Overall win rate (last 30 days)
-        $totalWins   = Signal::where('status', 'win')->where('closed_at', '>=', $now->copy()->subDays(30))->count();
-        $totalLosses = Signal::where('status', 'loss')->where('closed_at', '>=', $now->copy()->subDays(30))->count();
-        $totalClosed = $totalWins + $totalLosses;
-        $overallWinRate = $totalClosed > 0 ? round(($totalWins / $totalClosed) * 100, 1) : 0;
-
-        // Revenue stats
-        $totalRevenue      = Payment::where('status', 'confirmed')->sum('amount');
-        $revenueThisMonth  = Payment::where('status', 'confirmed')
+        // ── Revenue stats ─────────────────────────────────────────
+        $revenueMonth    = Payment::where('status', 'confirmed')
             ->whereMonth('created_at', $now->month)
             ->whereYear('created_at', $now->year)
             ->sum('amount');
-        $pendingPayments   = Payment::where('status', 'pending')->whereNotNull('tx_hash')->count();
+        $pendingPayments = Payment::where('status', 'pending')
+            ->whereNotNull('tx_hash')
+            ->count();
 
-        // Recent activity
+        // ── Chart: signals per day (last 30 days) ─────────────────
+        $signalCountsByDate = Signal::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('created_at', '>=', $now->copy()->subDays(29)->startOfDay())
+            ->groupBy('date')
+            ->pluck('count', 'date');
+
+        $signalDates  = [];
+        $signalCounts = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = $now->copy()->subDays($i);
+            $signalDates[]  = $d->format('d M');
+            $signalCounts[] = (int) ($signalCountsByDate[$d->format('Y-m-d')] ?? 0);
+        }
+
+        // ── Chart: signals by pair (top 6) ────────────────────────
+        $pairData   = Signal::join('trading_pairs', 'signals.trading_pair_id', '=', 'trading_pairs.id')
+            ->select('trading_pairs.symbol', DB::raw('COUNT(*) as count'))
+            ->groupBy('trading_pairs.symbol', 'trading_pairs.id')
+            ->orderByDesc('count')
+            ->limit(6)
+            ->pluck('count', 'symbol');
+
+        $chartData = [
+            'signal_dates'  => $signalDates,
+            'signal_counts' => $signalCounts,
+            'pair_labels'   => $pairData->keys()->values()->all(),
+            'pair_counts'   => $pairData->values()->all(),
+        ];
+
+        // ── Stats array (Blade-friendly keys) ─────────────────────
+        $stats = [
+            'total_users'          => $totalUsers,
+            'active_subscriptions' => $activeSubscriptions,
+            'signals_today'        => $totalSignalsToday,
+            'signals_pending'      => $signalsPending,
+            'win_rate'             => $winRate,
+            'total_wins'           => $totalWins,
+            'total_losses'         => $totalLosses,
+            'total_closed'         => $totalClosed,
+            'revenue_month'        => round($revenueMonth, 2),
+            'pending_payments'     => $pendingPayments,
+            'new_users_week'       => $newUsersWeek,
+        ];
+
+        // ── Recent activity ───────────────────────────────────────
         $recentSignals = Signal::with('tradingPair')
             ->latest()
             ->limit(10)
-            ->get()
-            ->map(fn($s) => [
-                'id'            => $s->id,
-                'symbol'        => $s->tradingPair->symbol,
-                'timeframe'     => $s->timeframe,
-                'signal_type'   => $s->signal_type,
-                'confidence'    => $s->confidence_score,
-                'status'        => $s->status,
-                'created_at'    => $s->created_at->toISOString(),
-            ]);
+            ->get();
 
-        $recentUsers = User::latest()->limit(5)->get(['id', 'name', 'email', 'subscription_type', 'created_at']);
-
-        $recentPayments = Payment::with(['user', 'package'])
-            ->whereNotNull('tx_hash')
-            ->where('status', 'pending')
+        $recentUsers = User::with(['activeSubscription.package'])
             ->latest()
             ->limit(5)
-            ->get()
-            ->map(fn($p) => [
-                'id'         => $p->id,
-                'user'       => $p->user->name,
-                'package'    => $p->package->name,
-                'amount'     => $p->amount,
-                'currency'   => $p->currency,
-                'created_at' => $p->created_at->toISOString(),
-            ]);
+            ->get();
 
-        $data = [
-            'users' => [
-                'total'                => $totalUsers,
-                'active'               => $activeUsers,
-                'blocked'              => $blockedUsers,
-                'new_today'            => $newUsersToday,
-                'new_this_month'       => $newUsersThisMonth,
-                'active_subscriptions' => $activeSubscriptions,
-                'by_subscription'      => $subscriptionsByType,
-            ],
-            'signals' => [
-                'total_today'    => $totalSignalsToday,
-                'active'         => $activeSignals,
-                'wins_today'     => $winsToday,
-                'losses_today'   => $lossesToday,
-                'win_rate_today' => $winRateToday,
-                'win_rate_30d'   => $overallWinRate,
-            ],
-            'revenue' => [
-                'total'            => round($totalRevenue, 2),
-                'this_month'       => round($revenueThisMonth, 2),
-                'pending_payments' => $pendingPayments,
-            ],
-            'recent' => [
-                'signals'  => $recentSignals,
-                'users'    => $recentUsers,
-                'payments' => $recentPayments,
-            ],
-        ];
+        $recentPayments = Payment::with('user')
+            ->whereNotNull('tx_hash')
+            ->latest()
+            ->limit(5)
+            ->get();
 
-        // Return Blade view for web requests, JSON for API requests
+        // ── Return: Blade for web, JSON for API ───────────────────
         if ($request->expectsJson() || $request->is('api/*')) {
-            return response()->json(['success' => true, 'data' => $data]);
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'users'   => [
+                        'total'                => $totalUsers,
+                        'active'               => $activeUsers,
+                        'blocked'              => $blockedUsers,
+                        'new_today'            => $newUsersToday,
+                        'new_this_month'       => $newUsersThisMonth,
+                        'active_subscriptions' => $activeSubscriptions,
+                    ],
+                    'signals' => [
+                        'total_today' => $totalSignalsToday,
+                        'pending'     => $signalsPending,
+                        'wins'        => $totalWins,
+                        'losses'      => $totalLosses,
+                        'win_rate'    => $winRate,
+                    ],
+                    'revenue' => [
+                        'this_month'       => round($revenueMonth, 2),
+                        'pending_payments' => $pendingPayments,
+                    ],
+                ],
+            ]);
         }
 
-        return view('admin.dashboard.index', $data);
+        return view('admin.dashboard.index', compact(
+            'stats',
+            'chartData',
+            'recentSignals',
+            'recentUsers',
+            'recentPayments'
+        ));
     }
 
     /**
@@ -159,7 +178,7 @@ class DashboardController extends Controller
             ->groupBy('trading_pair_id', 'timeframe')
             ->get()
             ->map(function ($row) {
-                $closed  = $row->wins + $row->losses;
+                $closed = $row->wins + $row->losses;
                 return [
                     'symbol'         => $row->tradingPair->symbol,
                     'timeframe'      => $row->timeframe,
@@ -179,20 +198,5 @@ class DashboardController extends Controller
             'data'    => $breakdown,
             'meta'    => ['days' => $days],
         ]);
-    }
-
-    // ── Web (Blade) view method ──────────────────────────────────
-
-    /**
-     * Show the admin dashboard Blade view.
-     * This is the web-only version of the dashboard.
-     * Note: The index() method above returns JSON for API requests and
-     * the Blade view for web requests based on the request type.
-     */
-    private function getDashboardData(): array
-    {
-        // This is the shared data-fetching logic; the index() method
-        // already returns JSON. For Blade, we would use the same data.
-        return [];
     }
 }

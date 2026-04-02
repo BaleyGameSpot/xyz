@@ -112,4 +112,20 @@ class Signal extends Model
     {
         return abs((float) $this->entry_price - (float) $this->stop_loss);
     }
+
+    // Blade-friendly accessors
+    public function getPairAttribute(): string
+    {
+        return $this->tradingPair->symbol ?? '';
+    }
+
+    public function getTypeAttribute(): string
+    {
+        return $this->signal_type ?? '';
+    }
+
+    public function getTakeProfitsAttribute(): array
+    {
+        return $this->take_profit !== null ? [(float) $this->take_profit] : [];
+    }
 }

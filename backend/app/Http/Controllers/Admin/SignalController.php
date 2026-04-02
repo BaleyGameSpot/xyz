@@ -13,40 +13,50 @@ class SignalController extends Controller
 {
     /**
      * List all signals with filters.
-     * GET /api/admin/signals
+     * GET /api/admin/signals  (JSON)
+     * GET /admin/signals      (Blade view)
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse|\Illuminate\View\View
     {
         $query = Signal::with('tradingPair');
 
-        if ($request->has('symbol')) {
-            $pair = TradingPair::where('symbol', strtoupper($request->symbol))->first();
+        // Web blade uses 'pair'; API uses 'symbol'
+        $symbolFilter = $request->get('pair') ?? $request->get('symbol');
+        if ($symbolFilter) {
+            $pair = TradingPair::where('symbol', strtoupper($symbolFilter))->first();
             if ($pair) {
                 $query->where('trading_pair_id', $pair->id);
             }
         }
 
-        if ($request->has('timeframe')) {
+        if ($request->filled('timeframe')) {
             $query->where('timeframe', $request->timeframe);
         }
 
-        if ($request->has('signal_type')) {
-            $query->where('signal_type', strtoupper($request->signal_type));
+        // Web blade uses 'type'; API uses 'signal_type'
+        $typeFilter = $request->get('type') ?? $request->get('signal_type');
+        if ($typeFilter) {
+            $query->where('signal_type', strtoupper($typeFilter));
         }
 
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('date_from')) {
+        // Web blade uses 'date' for single date; API uses date_from/date_to
+        if ($request->filled('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+
+        if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
 
-        if ($request->has('date_to')) {
+        if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        if ($request->has('min_confidence')) {
+        if ($request->filled('min_confidence')) {
             $query->where('confidence_score', '>=', (int) $request->min_confidence);
         }
 
@@ -55,63 +65,76 @@ class SignalController extends Controller
         }
 
         $perPage = min((int) $request->get('per_page', 25), 100);
-        $signals = $query->latest()->paginate($perPage);
+        $signals = $query->latest()->paginate($perPage)->withQueryString();
 
-        // Summary stats
-        $stats = [
-            'total'       => Signal::count(),
-            'active'      => Signal::where('status', 'active')->count(),
-            'wins'        => Signal::where('status', 'win')->count(),
-            'losses'      => Signal::where('status', 'loss')->count(),
-            'today_total' => Signal::whereDate('created_at', today())->count(),
+        // Summary stats (same for both web and API)
+        $signalStats = [
+            'total'   => Signal::count(),
+            'pending' => Signal::where('status', 'pending')->count(),
+            'wins'    => Signal::where('status', 'win')->count(),
+            'losses'  => Signal::where('status', 'loss')->count(),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data'    => $signals->items(),
-            'meta'    => [
-                'current_page' => $signals->currentPage(),
-                'last_page'    => $signals->lastPage(),
-                'per_page'     => $signals->perPage(),
-                'total'        => $signals->total(),
-                'stats'        => $stats,
-            ],
-        ]);
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'data'    => $signals->items(),
+                'meta'    => [
+                    'current_page' => $signals->currentPage(),
+                    'last_page'    => $signals->lastPage(),
+                    'per_page'     => $signals->perPage(),
+                    'total'        => $signals->total(),
+                    'stats'        => $signalStats,
+                ],
+            ]);
+        }
+
+        // Available pairs for filter dropdown
+        $pairs = TradingPair::where('is_active', true)
+            ->orderBy('symbol')
+            ->pluck('symbol')
+            ->all();
+
+        return view('admin.signals.index', compact('signals', 'signalStats', 'pairs'));
     }
 
     /**
      * Get a single signal.
-     * GET /api/admin/signals/{id}
+     * GET /api/admin/signals/{id}  (JSON)
+     * GET /admin/signals/{signal}  (Blade view)
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, Signal $signal): JsonResponse|\Illuminate\View\View
     {
-        $signal = Signal::with('tradingPair')->findOrFail($id);
+        $signal->load('tradingPair');
 
-        return response()->json([
-            'success' => true,
-            'data'    => $signal,
-        ]);
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json(['success' => true, 'data' => $signal]);
+        }
+
+        return view('admin.signals.show', compact('signal'));
     }
 
     /**
      * Manually mark a signal as win or loss.
-     * POST /api/admin/signals/{id}/mark
+     * PATCH /api/admin/signals/{id}/mark  (JSON)
+     * PATCH /admin/signals/{signal}/mark  (web — redirect back)
      */
-    public function mark(Request $request, int $id): JsonResponse
+    public function mark(Request $request, Signal $signal): JsonResponse|\Illuminate\Http\RedirectResponse
     {
         $request->validate([
-            'status'           => ['required', 'in:win,loss,expired'],
-            'close_price'      => ['sometimes', 'numeric', 'min:0'],
+            'status'            => ['required', 'in:win,loss,expired'],
+            'close_price'       => ['sometimes', 'numeric', 'min:0'],
             'result_percentage' => ['sometimes', 'numeric'],
         ]);
 
-        $signal = Signal::findOrFail($id);
-
         if (! in_array($signal->status, ['active', 'pending'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only active or pending signals can be marked.',
-            ], 422);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only active or pending signals can be marked.',
+                ], 422);
+            }
+            return back()->with('error', 'Only active or pending signals can be marked.');
         }
 
         $updates = [
@@ -138,6 +161,10 @@ class SignalController extends Controller
         }
 
         $signal->update($updates);
+
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
+            return back()->with('success', "Signal #{$signal->id} marked as {$request->status}.");
+        }
 
         return response()->json([
             'success' => true,
