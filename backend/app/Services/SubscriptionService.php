@@ -136,7 +136,7 @@ class SubscriptionService
             $subscription = $payment->subscription;
             $subscription->update([
                 'payment_status' => 'confirmed',
-                'confirmed_by'   => $adminUser->id,
+                'confirmed_by'   => ($adminUser instanceof User) ? $adminUser->id : null,
                 'confirmed_at'   => now(),
                 'admin_note'     => $note,
             ]);
@@ -180,7 +180,7 @@ class SubscriptionService
                 $payment->subscription->update([
                     'payment_status' => 'failed',
                     'admin_note'     => $reason,
-                    'confirmed_by'   => $adminUser->id,
+                    'confirmed_by'   => ($adminUser instanceof User) ? $adminUser->id : null,
                     'confirmed_at'   => now(),
                 ]);
             }
@@ -220,7 +220,7 @@ class SubscriptionService
                 'payment_status' => 'confirmed',
                 'amount'         => 0,
                 'currency'       => 'USDT',
-                'confirmed_by'   => $adminUser->id,
+                'confirmed_by'   => ($adminUser instanceof User) ? $adminUser->id : null,
                 'confirmed_at'   => now(),
                 'admin_note'     => 'Manually assigned by admin',
             ]);
