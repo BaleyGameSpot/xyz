@@ -43,13 +43,13 @@ data class SignalReason(
 ) : Parcelable
 
 data class TodayStats(
-    @SerializedName("signals_available") val signalsAvailable: Int,
-    @SerializedName("signals_used") val signalsUsed: Int,
+    @SerializedName("remaining") val signalsAvailable: Int,
+    @SerializedName("total") val signalsUsed: Int,
     @SerializedName("win_rate") val winRate: Double,
     @SerializedName("daily_limit") val dailyLimit: Int
 )
 
 data class AnalyzeRequest(
-    @SerializedName("pair_id") val pairId: Int,
+    @SerializedName("symbol") val symbol: String,
     @SerializedName("timeframe") val timeframe: String
 )

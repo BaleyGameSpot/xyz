@@ -80,7 +80,9 @@ class HomeViewModel @Inject constructor(
         val pairId = _selectedPairId.value
         val timeframe = _selectedTimeframe.value
         if (pairId == -1) return
-        signalRepository.analyzeSignal(pairId, timeframe)
+        val pairs = (_pairsState.value as? Resource.Success)?.data
+        val symbol = pairs?.find { it.id == pairId }?.symbol ?: return
+        signalRepository.analyzeSignal(symbol, timeframe)
             .onEach { _analyzeState.value = it }
             .launchIn(viewModelScope)
     }

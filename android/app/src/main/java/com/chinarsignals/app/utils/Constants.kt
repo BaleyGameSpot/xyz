@@ -1,11 +1,11 @@
 package com.chinarsignals.app.utils
 
 object Constants {
-    val TIMEFRAMES = listOf("1M", "3M", "5M", "15M", "30M", "1H", "4H", "1D")
+    val TIMEFRAMES = listOf("1m", "3m", "5m", "15m", "30m", "1h", "4h", "1D")
 
-    val BASIC_TIMEFRAMES = listOf("15M", "30M", "1H")
-    val BEST_TIMEFRAMES = listOf("5M", "15M", "30M", "1H", "4H")
-    val PREMIUM_TIMEFRAMES = listOf("1M", "3M", "5M", "15M", "30M", "1H", "4H", "1D")
+    val BASIC_TIMEFRAMES = listOf("15m", "30m", "1h")
+    val BEST_TIMEFRAMES = listOf("5m", "15m", "30m", "1h", "4h")
+    val PREMIUM_TIMEFRAMES = listOf("1m", "3m", "5m", "15m", "30m", "1h", "4h", "1D")
 
     const val EXTRA_SIGNAL = "extra_signal"
     const val EXTRA_SIGNAL_ID = "extra_signal_id"

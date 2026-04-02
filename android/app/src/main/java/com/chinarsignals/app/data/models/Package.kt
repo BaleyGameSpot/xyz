@@ -31,13 +31,14 @@ data class Package(
 data class PurchaseRequest(
     @SerializedName("package_id") val packageId: Int,
     @SerializedName("tx_hash") val txHash: String,
-    @SerializedName("wallet_address") val walletAddress: String
+    @SerializedName("wallet_address") val walletAddress: String,
+    @SerializedName("currency") val currency: String = "USDT"
 )
 
 data class SubscriptionStatus(
-    @SerializedName("is_active") val isActive: Boolean,
+    @SerializedName("active") val isActive: Boolean,
     @SerializedName("package") val packageInfo: Package?,
-    @SerializedName("expiry_date") val expiryDate: String?,
+    @SerializedName("expiry") val expiryDate: String?,
     @SerializedName("signals_used_today") val signalsUsedToday: Int,
     @SerializedName("daily_limit") val dailyLimit: Int
 )

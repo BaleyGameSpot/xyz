@@ -50,7 +50,7 @@ class SubscriptionRepository @Inject constructor(
     fun purchaseSubscription(packageId: Int): Flow<Resource<WalletInfo>> = flow {
         emit(Resource.Loading())
         try {
-            val request = PurchaseRequest(packageId, "", "")
+            val request = PurchaseRequest(packageId, "", "", "USDT")
             val response = apiService.purchaseSubscription(request)
             if (response.isSuccessful && response.body()?.success == true) {
                 emit(Resource.Success(response.body()!!.data!!))

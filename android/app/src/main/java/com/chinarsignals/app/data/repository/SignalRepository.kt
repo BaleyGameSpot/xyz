@@ -32,10 +32,10 @@ class SignalRepository @Inject constructor(
         }
     }
 
-    fun analyzeSignal(pairId: Int, timeframe: String): Flow<Resource<Signal>> = flow {
+    fun analyzeSignal(symbol: String, timeframe: String): Flow<Resource<Signal>> = flow {
         emit(Resource.Loading())
         try {
-            val response = apiService.analyzeSignal(AnalyzeRequest(pairId, timeframe))
+            val response = apiService.analyzeSignal(AnalyzeRequest(symbol, timeframe))
             if (response.isSuccessful && response.body()?.success == true) {
                 emit(Resource.Success(response.body()!!.data!!))
             } else {

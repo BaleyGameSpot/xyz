@@ -208,6 +208,14 @@ class HomeFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Refresh subscription status and stats each time screen is visible
+        // (e.g. after returning from PackagesActivity or after admin assigns subscription)
+        viewModel.loadSubscriptionStatus()
+        viewModel.loadTodayStats()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
