@@ -23,7 +23,7 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse|\Illuminate\View\View
     {
-        $query = User::with(['activeSubscription.package'])->query();
+        $query = User::with(['activeSubscription.package']);
 
         // Web blade uses 'search', API uses 'search' too
         if ($request->filled('search')) {
