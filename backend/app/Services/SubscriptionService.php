@@ -6,6 +6,7 @@ use App\Models\Package;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserSubscription;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -204,10 +205,10 @@ class SubscriptionService
      * @return UserSubscription
      */
     public function assignManualSubscription(
-        User    $user,
-        Package $package,
-        User    $adminUser,
-        int     $durationDays = 30
+        User             $user,
+        Package          $package,
+        Authenticatable  $adminUser,
+        int              $durationDays = 30
     ): UserSubscription {
         return DB::transaction(function () use ($user, $package, $adminUser, $durationDays) {
             $subscription = UserSubscription::create([
