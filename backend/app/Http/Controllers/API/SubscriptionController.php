@@ -152,13 +152,6 @@ class SubscriptionController extends Controller
             ], 422);
         }
 
-        if ($payment->isExpired()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment window has expired. Please initiate a new payment.',
-            ], 422);
-        }
-
         try {
             $payment = $this->subscriptionService->submitTxHash($payment, $request->tx_hash);
 
