@@ -53,14 +53,11 @@ class SubscriptionService
 
             // Create payment record
             $payment = Payment::create([
-                'user_id'        => $user->id,
-                'package_id'     => $package->id,
-                'subscription_id' => $subscription->id,
-                'amount'         => $package->getEffectivePrice(),
-                'currency'       => $currency,
-                'wallet_address' => $wallet,
-                'status'         => 'pending',
-                'expires_at'     => now()->addHours(24), // 24-hour payment window
+                'user_id'     => $user->id,
+                'package_id'  => $package->id,
+                'amount'      => $package->getEffectivePrice(),
+                'crypto_type' => $currency,
+                'status'      => 'pending',
             ]);
 
             Log::info('Subscription purchase initiated', [
@@ -92,10 +89,6 @@ class SubscriptionService
     {
         if (! $payment->isPending()) {
             throw new \RuntimeException('Payment is not in pending status');
-        }
-
-        if ($payment->isExpired()) {
-            throw new \RuntimeException('Payment window has expired');
         }
 
         // Check if tx_hash already used

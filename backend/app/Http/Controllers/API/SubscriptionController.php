@@ -71,15 +71,13 @@ class SubscriptionController extends Controller
             $pending = $this->subscriptionService->getPendingPayment($user);
             return response()->json([
                 'success' => false,
-                'message' => 'You have a pending payment. Please complete it or wait for it to expire.',
+                'message' => 'You have a pending payment. Please complete it or contact support.',
                 'data'    => [
                     'pending_payment' => [
-                        'id'             => $pending->id,
-                        'amount'         => $pending->amount,
-                        'currency'       => $pending->currency,
-                        'wallet_address' => $pending->wallet_address,
-                        'expires_at'     => $pending->expires_at,
-                        'package'        => $pending->package->name,
+                        'id'          => $pending->id,
+                        'amount'      => $pending->amount,
+                        'crypto_type' => $pending->crypto_type,
+                        'package'     => $pending->package->name,
                     ],
                 ],
             ], 422);
@@ -88,18 +86,20 @@ class SubscriptionController extends Controller
         try {
             $result = $this->subscriptionService->initiatePurchase($user, $package, $request->currency);
 
+            $cryptoType = $result['payment']->crypto_type;
+            $amount     = $result['payment']->amount;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Payment initiated. Please send the exact amount to the wallet address.',
                 'data'    => [
                     'payment_id'     => $result['payment']->id,
-                    'amount'         => $result['payment']->amount,
-                    'currency'       => $result['payment']->currency,
+                    'amount'         => $amount,
+                    'currency'       => $cryptoType,
                     'wallet_address' => $result['wallet'],
-                    'expires_at'     => $result['payment']->expires_at,
                     'package'        => $package->name,
                     'instructions'   => [
-                        'step_1' => "Send exactly {$result['payment']->amount} {$result['payment']->currency} to the wallet address below.",
+                        'step_1' => "Send exactly {$amount} {$cryptoType} to the wallet address below.",
                         'step_2' => 'After payment, submit your transaction hash via the verify-payment endpoint.',
                         'step_3' => 'Our team will confirm your payment within 1-24 hours.',
                     ],
