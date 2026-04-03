@@ -14,7 +14,7 @@ data class Signal(
     @SerializedName("stop_loss") val stopLoss: Double,
     @SerializedName("take_profit") val takeProfit: Double,
     @SerializedName("confidence_score") val confidenceScore: Int,
-    @SerializedName("reason") val reason: SignalReason,
+    @SerializedName("reason") val reason: SignalReason? = null,
     @SerializedName("status") val status: String,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("risk_reward") val riskReward: Double? = null
@@ -35,11 +35,11 @@ data class Signal(
 
 @Parcelize
 data class SignalReason(
-    @SerializedName("market_structure") val marketStructure: String,
-    @SerializedName("order_block") val orderBlock: String?,
-    @SerializedName("fvg") val fvg: String?,
-    @SerializedName("mtf_trend") val mtfTrend: String,
-    @SerializedName("summary") val summary: String
+    @SerializedName("market_structure") val marketStructure: String? = null,
+    @SerializedName("order_block") val orderBlock: String? = null,
+    @SerializedName("fvg") val fvg: String? = null,
+    @SerializedName("mtf_trend") val mtfTrend: String? = null,
+    @SerializedName("summary") val summary: String? = null
 ) : Parcelable
 
 data class TodayStats(

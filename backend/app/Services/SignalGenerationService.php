@@ -217,8 +217,8 @@ class SignalGenerationService
                 'zlema_34'  => round($zlemaLast, 8),
                 'current'   => round($currentClose, 8),
             ],
-            'mtf_trend'  => $mtfTrend,
-            'atr'        => round($atr, 8),
+            'mtf_trend_data' => $mtfTrend,
+            'atr'            => round($atr, 8),
             'confidence_factors' => [
                 'market_structure' => $primarySignal !== null,
                 'order_block_near' => $isOBNear,
@@ -227,6 +227,21 @@ class SignalGenerationService
                 'mtf_4h_agrees'    => $mtf4hAgrees,
                 'ema_trend'        => $emaAgrees,
             ],
+            // Simplified summary fields for mobile app display
+            'market_structure' => ucfirst($internalStructure['trend'] ?? 'neutral') . ' — ' . ($internalStructure['pattern'] ?? 'Structure detected'),
+            'order_block'      => $isOBNear ? 'Price is near a key order block zone' : null,
+            'fvg'              => $isFVGNear ? 'Price is within a fair value gap' : null,
+            'mtf_trend'        => ($mtf1hAgrees && $mtf4hAgrees)
+                                    ? 'Multi-timeframe trend fully aligned'
+                                    : ($mtf1hAgrees || $mtf4hAgrees ? 'Partial multi-timeframe alignment' : 'No multi-timeframe confirmation'),
+            'summary'          => sprintf(
+                '%s signal with %d%% confidence. %s %s %s',
+                $primarySignal ?? 'No',
+                $confidence,
+                $isOBNear ? 'Order block zone active.' : '',
+                $isFVGNear ? 'FVG present.' : '',
+                ($mtf1hAgrees || $mtf4hAgrees) ? 'MTF trend aligned.' : ''
+            ),
         ];
 
         return [

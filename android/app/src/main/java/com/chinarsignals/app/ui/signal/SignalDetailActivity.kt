@@ -82,20 +82,21 @@ class SignalDetailActivity : AppCompatActivity() {
         binding.tvCreatedAt.text = signal.createdAt.toTimeAgo()
 
         // Reasons
-        binding.tvMarketStructure.text = signal.reason.marketStructure
-        binding.tvMtfTrend.text = signal.reason.mtfTrend
-        binding.tvSummary.text = signal.reason.summary
+        val reason = signal.reason
+        binding.tvMarketStructure.text = reason?.marketStructure ?: "—"
+        binding.tvMtfTrend.text = reason?.mtfTrend ?: "—"
+        binding.tvSummary.text = reason?.summary ?: "—"
 
-        if (!signal.reason.orderBlock.isNullOrBlank()) {
+        if (!reason?.orderBlock.isNullOrBlank()) {
             binding.tvOrderBlockLabel.visibility = android.view.View.VISIBLE
             binding.tvOrderBlock.visibility = android.view.View.VISIBLE
-            binding.tvOrderBlock.text = signal.reason.orderBlock
+            binding.tvOrderBlock.text = reason?.orderBlock
         }
 
-        if (!signal.reason.fvg.isNullOrBlank()) {
+        if (!reason?.fvg.isNullOrBlank()) {
             binding.tvFvgLabel.visibility = android.view.View.VISIBLE
             binding.tvFvg.visibility = android.view.View.VISIBLE
-            binding.tvFvg.text = signal.reason.fvg
+            binding.tvFvg.text = reason?.fvg
         }
 
         // SL color based on signal type

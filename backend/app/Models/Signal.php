@@ -113,6 +113,8 @@ class Signal extends Model
         return abs((float) $this->entry_price - (float) $this->stop_loss);
     }
 
+    protected $appends = ['pair'];
+
     // Blade-friendly accessors
     public function getPairAttribute(): string
     {
