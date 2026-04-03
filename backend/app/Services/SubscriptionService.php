@@ -276,7 +276,6 @@ class SubscriptionService
     {
         return Payment::where('user_id', $user->id)
             ->where('status', 'pending')
-            ->where('expires_at', '>', now())
             ->exists();
     }
 
