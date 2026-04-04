@@ -499,6 +499,12 @@
             Signals
         </a>
 
+        <a href="{{ route('admin.pairs.index') }}"
+           class="nav-link {{ request()->routeIs('admin.pairs.*') ? 'active' : '' }}">
+            <i class="bi bi-diagram-2"></i>
+            Trading Pairs
+        </a>
+
         <div class="nav-section-label">Commerce</div>
 
         <a href="{{ route('admin.packages.index') }}"

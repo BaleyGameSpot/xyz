@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PairController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SignalController;
 use App\Http\Controllers\Admin\PackageController;
@@ -54,6 +55,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             '/subscriptions/{subscription}/revoke',
             [UserController::class, 'revokeSubscription']
         )->name('subscriptions.revoke');
+
+        // ── Trading Pairs ─────────────────────────────────────────
+        Route::prefix('pairs')->name('pairs.')->group(function () {
+            Route::get('/',                   [PairController::class, 'index'])  ->name('index');
+            Route::post('/',                  [PairController::class, 'store'])  ->name('store');
+            Route::put('/{pair}',             [PairController::class, 'update']) ->name('update');
+            Route::delete('/{pair}',          [PairController::class, 'destroy'])->name('destroy');
+            Route::patch('/{pair}/toggle',    [PairController::class, 'toggle']) ->name('toggle');
+        });
 
         // ── Signals ──────────────────────────────────────────────
         Route::prefix('signals')->name('signals.')->group(function () {
