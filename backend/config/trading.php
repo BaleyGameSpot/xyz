@@ -57,7 +57,7 @@ return [
     'signals' => [
         'atr_sl_multiplier' => 1.5,
         'risk_reward_ratio' => 2.0,
-        'min_confidence' => 40,
+        'min_confidence' => 55,
         'expiry_hours' => 24,
     ],
 

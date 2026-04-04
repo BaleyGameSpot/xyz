@@ -127,6 +127,11 @@ class SignalGenerationService
         // Determine primary signal direction
         $primarySignal = $internalStructure['signal'] ?? $swingStructure['signal'] ?? null;
 
+        // Early exit: no structure break detected at all
+        if ($primarySignal === null) {
+            return ['signal' => null, 'entry' => 0, 'sl' => 0, 'tp' => 0, 'confidence' => 0, 'reason' => []];
+        }
+
         // 3. ATR
         $atr = $this->indicatorService->calculateATR($ohlcv, $atrLength);
 
@@ -142,6 +147,27 @@ class SignalGenerationService
 
         // 7. MTF EMA trend
         $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
+
+        // ── MTF Hard Block ──────────────────────────────────────────────────
+        // If BOTH higher timeframes disagree with the signal direction, cancel
+        // the signal entirely. Prevents counter-trend signals in trending markets.
+        // (e.g. 15m SELL while 1h + 4h are bullish → discard)
+        $signalDir   = strtolower($primarySignal); // 'buy' → 'bullish', 'sell' → 'bearish'
+        $signalTrend = $primarySignal === 'BUY' ? 'bullish' : 'bearish';
+        $mtf1hExists = isset($mtfTrend['1h']) && $mtfTrend['1h'] !== 'neutral';
+        $mtf4hExists = isset($mtfTrend['4h']) && $mtfTrend['4h'] !== 'neutral';
+
+        if ($mtf1hExists && $mtf4hExists) {
+            $mtf1hAgainstSignal = $mtfTrend['1h'] !== $signalTrend;
+            $mtf4hAgainstSignal = $mtfTrend['4h'] !== $signalTrend;
+            if ($mtf1hAgainstSignal && $mtf4hAgainstSignal) {
+                Log::debug("MTF hard block: {$primarySignal} signal cancelled — 1h={$mtfTrend['1h']} 4h={$mtfTrend['4h']}", [
+                    'symbol'    => $pair->symbol,
+                    'timeframe' => $timeframe,
+                ]);
+                return ['signal' => null, 'entry' => 0, 'sl' => 0, 'tp' => 0, 'confidence' => 0, 'reason' => []];
+            }
+        }
 
         // 8. EMA trend on current timeframe
         $closes     = array_map(fn($c) => (float) $c['close'], $ohlcv);

@@ -135,22 +135,9 @@ class IndicatorService
                 $signal   = 'SELL';
                 $strength = 70;
             }
-        } else {
-            // No fresh break – check for CHoCH+ (strong reversal confirmation)
-            $recentHighs = array_slice($highs, -10);
-            $recentLows  = array_slice($lows, -10);
-            $priceAboveMid = $currentClose > (max($recentHighs) + min($recentLows)) / 2;
-
-            if ($trend === 'bearish' && $priceAboveMid) {
-                $pattern  = 'CHoCH+';
-                $signal   = 'BUY';
-                $strength = 60;
-            } elseif ($trend === 'bullish' && ! $priceAboveMid) {
-                $pattern  = 'CHoCH+';
-                $signal   = 'SELL';
-                $strength = 60;
-            }
         }
+        // CHoCH+ removed: it was too loose (mid-range check only) and generated
+        // too many false reversal signals in ranging/consolidating markets.
 
         return [
             'trend'           => $trend,
