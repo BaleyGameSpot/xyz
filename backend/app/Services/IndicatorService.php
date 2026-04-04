@@ -608,6 +608,146 @@ class IndicatorService
     }
 
     /**
+     * Detect OB + FVG retest setups.
+     *
+     * SELL setup: Bearish supply OB above price
+     *             + unfilled "bullish FVG" (gap above price, sitting below the OB)
+     *             + current candle HIGH has reached / entered the FVG → SELL entry
+     *             SL = OB high + ATR buffer
+     *
+     * BUY setup:  Bullish demand OB below price
+     *             + unfilled "bearish FVG" (gap below price, sitting above the OB)
+     *             + current candle LOW has reached / entered the FVG → BUY entry
+     *             SL = OB low − ATR buffer
+     *
+     * Note on FVG naming (matches our existing detectFVG() output):
+     *   "bullish FVG" → gap created by a DOWN-move; gap sits ABOVE current position
+     *   "bearish FVG" → gap created by an UP-move;   gap sits BELOW current position
+     *
+     * @param  array $ohlcv  Full OHLCV array
+     * @param  float $atr    Current ATR value (for SL buffer)
+     * @param  float $rrRatio Risk:Reward ratio for TP calculation
+     * @return array ['sell' => [...setups], 'buy' => [...setups]]
+     */
+    public function detectOBFVGSetup(array $ohlcv, float $atr, float $rrRatio = 2.0): array
+    {
+        if (count($ohlcv) < 15) {
+            return ['sell' => [], 'buy' => []];
+        }
+
+        $count        = count($ohlcv);
+        $lastCandle   = $ohlcv[$count - 1];
+        $currentClose = (float) $lastCandle['close'];
+        $currentHigh  = (float) $lastCandle['high'];
+        $currentLow   = (float) $lastCandle['low'];
+
+        // Supply OBs (bearish, above price) and demand OBs (bullish, below price)
+        $supplyOBs = $this->detectOrderBlocks($ohlcv, 'bearish');
+        $demandOBs = $this->detectOrderBlocks($ohlcv, 'bullish');
+        $fvgs      = $this->detectFVG($ohlcv);
+
+        $sellSetups = [];
+        $buySetups  = [];
+
+        // ── SELL: supply OB above + bullish FVG (gap above price) + price taping ───────
+        foreach ($supplyOBs as $ob) {
+            // OB must be above current price
+            if ($ob['low'] <= $currentPrice = $currentClose) {
+                continue;
+            }
+
+            foreach ($fvgs['bullish'] as $fvg) {
+                // FVG must be BETWEEN current price and OB:
+                //   fvg.bottom > currentClose  (gap starts above price)
+                //   fvg.top    < ob.low        (gap ends below OB bottom)
+                if ($fvg['bottom'] <= $currentClose) {
+                    continue;
+                }
+                if ($fvg['top'] >= $ob['low']) {
+                    continue;
+                }
+
+                // FVG must not already be filled (close must be below fvg.top)
+                if ($currentClose >= $fvg['top']) {
+                    continue;
+                }
+
+                // "Taping": current candle high has touched or entered the FVG
+                if ($currentHigh < $fvg['bottom']) {
+                    continue;
+                }
+
+                $slPrice  = $ob['high'] + ($atr * 0.3);
+                $risk     = $slPrice - $currentClose;
+                if ($risk <= 0) {
+                    continue;
+                }
+                $tp = $currentClose - ($risk * $rrRatio);
+
+                $sellSetups[] = [
+                    'ob'          => $ob,
+                    'fvg'         => $fvg,
+                    'entry'       => round($currentClose, 8),
+                    'sl'          => round($slPrice, 8),
+                    'tp'          => round($tp, 8),
+                    'fvg_dist_pct'=> round(abs($fvg['bottom'] - $currentClose) / $currentClose * 100, 3),
+                ];
+            }
+        }
+
+        // ── BUY: demand OB below + bearish FVG (gap below price) + price taping ────────
+        foreach ($demandOBs as $ob) {
+            // OB must be below current price
+            if ($ob['high'] >= $currentClose) {
+                continue;
+            }
+
+            foreach ($fvgs['bearish'] as $fvg) {
+                // FVG must be BETWEEN OB and current price:
+                //   fvg.top    < currentClose  (gap ends below price)
+                //   fvg.bottom > ob.high       (gap starts above OB top)
+                if ($fvg['top'] >= $currentClose) {
+                    continue;
+                }
+                if ($fvg['bottom'] <= $ob['high']) {
+                    continue;
+                }
+
+                // FVG must not already be filled (close must be above fvg.bottom)
+                if ($currentClose <= $fvg['bottom']) {
+                    continue;
+                }
+
+                // "Taping": current candle low has touched or entered the FVG
+                if ($currentLow > $fvg['top']) {
+                    continue;
+                }
+
+                $slPrice = $ob['low'] - ($atr * 0.3);
+                $risk    = $currentClose - $slPrice;
+                if ($risk <= 0) {
+                    continue;
+                }
+                $tp = $currentClose + ($risk * $rrRatio);
+
+                $buySetups[] = [
+                    'ob'          => $ob,
+                    'fvg'         => $fvg,
+                    'entry'       => round($currentClose, 8),
+                    'sl'          => round($slPrice, 8),
+                    'tp'          => round($tp, 8),
+                    'fvg_dist_pct'=> round(abs($currentClose - $fvg['top']) / $currentClose * 100, 3),
+                ];
+            }
+        }
+
+        return [
+            'sell' => $sellSetups,
+            'buy'  => $buySetups,
+        ];
+    }
+
+    /**
      * Determine market trend from pivot highs and lows.
      */
     private function determineTrend(array $pivotHighs, array $pivotLows): string

@@ -149,9 +149,13 @@ class SignalController extends Controller
         }
 
         try {
-            $signal = $this->signalService->generateSignal($pair, $request->timeframe);
+            // Run both analysis methods; return whichever fired (BOS/CHoCH takes priority)
+            $signal      = $this->signalService->generateSignal($pair, $request->timeframe);
+            $obFvgSignal = $this->signalService->generateOBFVGSignal($pair, $request->timeframe);
 
-            if (! $signal) {
+            $result = $signal ?? $obFvgSignal;
+
+            if (! $result) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Analysis complete. No signal conditions met at this time.',
@@ -159,12 +163,14 @@ class SignalController extends Controller
                 ]);
             }
 
-            $signal->load('tradingPair');
+            $result->load('tradingPair');
+
+            $method = $signal ? 'BOS/CHoCH' : 'OB+FVG Retest';
 
             return response()->json([
                 'success' => true,
-                'message' => "Signal generated: {$signal->signal_type}",
-                'data'    => $signal,
+                'message' => "{$result->signal_type} signal generated via {$method}",
+                'data'    => $result,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([

@@ -340,6 +340,167 @@ class SignalGenerationService
     }
 
     /**
+     * Generate a signal using the OB + FVG retest method.
+     *
+     * Runs parallel to generateSignal() (BOS/CHoCH method).
+     * Signal fires when a candle TAPES into an FVG that sits between
+     * the current price and a stacked Order Block.
+     *
+     * @param  TradingPair $pair
+     * @param  string      $timeframe
+     * @return Signal|null
+     */
+    public function generateOBFVGSignal(TradingPair $pair, string $timeframe): ?Signal
+    {
+        try {
+            $limit = config('trading.indicators.candle_limit', 200);
+            $ohlcv = $this->marketDataService->getOHLCV($pair->symbol, $timeframe, $limit);
+
+            if (count($ohlcv) < 60) {
+                return null;
+            }
+
+            $atrLength = config('trading.indicators.atr_length', 14);
+            $rrRatio   = config('trading.signals.risk_reward_ratio', 2.0);
+            $atr       = $this->indicatorService->calculateATR($ohlcv, $atrLength);
+            $setups    = $this->indicatorService->detectOBFVGSetup($ohlcv, $atr, $rrRatio);
+
+            // Pick the strongest setup (sell takes priority; use first match)
+            $signalType = null;
+            $setup      = null;
+
+            if (! empty($setups['sell'])) {
+                $signalType = 'SELL';
+                $setup      = $setups['sell'][0];
+            } elseif (! empty($setups['buy'])) {
+                $signalType = 'BUY';
+                $setup      = $setups['buy'][0];
+            }
+
+            if (! $setup) {
+                return null;
+            }
+
+            // ── Confidence scoring ──────────────────────────────────────────────
+            // Base 65: having a stacked OB+FVG is itself a strong confluenced setup
+            $count     = count($ohlcv);
+            $closes    = array_map(fn($c) => (float) $c['close'], $ohlcv);
+            $emaLength = config('trading.indicators.ema_length', 34);
+            $smma      = $this->indicatorService->calculateSMMA($closes, $emaLength);
+            $zlema     = $this->indicatorService->calculateZLEMA($closes, $emaLength);
+            $smmaLast  = $smma[$count - 1] ?? 0;
+            $zlemaLast = $zlema[$count - 1] ?? 0;
+            $lastClose = $closes[$count - 1];
+
+            $emaTrend = 'neutral';
+            if ($lastClose > $smmaLast && $zlemaLast > $smmaLast) {
+                $emaTrend = 'bullish';
+            } elseif ($lastClose < $smmaLast && $zlemaLast < $smmaLast) {
+                $emaTrend = 'bearish';
+            }
+
+            $mtfTrend  = $this->getMTFTrend($pair->symbol, $timeframe);
+            $signalDir = $signalType === 'BUY' ? 'bullish' : 'bearish';
+
+            $confidence = 65;
+            if (isset($mtfTrend['1h']) && $mtfTrend['1h'] === $signalDir) {
+                $confidence += 15;
+            }
+            if (isset($mtfTrend['4h']) && $mtfTrend['4h'] === $signalDir) {
+                $confidence += 10;
+            }
+            if ($emaTrend === $signalDir) {
+                $confidence += 10;
+            }
+            $confidence = min(100, $confidence);
+
+            if ($confidence < config('trading.signals.min_confidence', 40)) {
+                return null;
+            }
+
+            // ── Duplicate guard (same method, same direction within 2 h) ────────
+            $recentSignal = Signal::where('trading_pair_id', $pair->id)
+                ->where('timeframe', $timeframe)
+                ->where('signal_type', $signalType)
+                ->where('status', 'active')
+                ->where('created_at', '>=', now()->subHours(2))
+                ->first();
+
+            if ($recentSignal) {
+                Log::debug("OB+FVG duplicate suppressed: {$signalType} {$pair->symbol} {$timeframe}");
+                return null;
+            }
+
+            // ── Reason JSON ─────────────────────────────────────────────────────
+            $reason = [
+                'type'             => 'OB_FVG_RETEST',
+                'ob_zone'          => ['high' => $setup['ob']['high'], 'low' => $setup['ob']['low']],
+                'fvg_zone'         => ['top'  => $setup['fvg']['top'], 'bottom' => $setup['fvg']['bottom']],
+                'fvg_dist_pct'     => $setup['fvg_dist_pct'],
+                'ema_trend'        => $emaTrend,
+                'mtf_trend_data'   => $mtfTrend,
+                // Simplified fields for mobile display
+                'market_structure' => ($signalType === 'BUY' ? 'Bullish' : 'Bearish') . ' OB + FVG Retest',
+                'order_block'      => sprintf(
+                    '%s OB: %.6f – %.6f',
+                    $signalType === 'BUY' ? 'Demand' : 'Supply',
+                    $setup['ob']['low'],
+                    $setup['ob']['high']
+                ),
+                'fvg'              => sprintf(
+                    'FVG zone: %.6f – %.6f (%.3f%% from entry)',
+                    $setup['fvg']['bottom'],
+                    $setup['fvg']['top'],
+                    $setup['fvg_dist_pct']
+                ),
+                'mtf_trend'        => isset($mtfTrend['1h'], $mtfTrend['4h'])
+                    ? "1h: {$mtfTrend['1h']}, 4h: {$mtfTrend['4h']}"
+                    : 'MTF data unavailable',
+                'summary'          => sprintf(
+                    '%s signal: price taping FVG below %s OB. Confidence %d%%. SL placed %s OB.',
+                    $signalType,
+                    $signalType === 'BUY' ? 'demand' : 'supply',
+                    $confidence,
+                    $signalType === 'BUY' ? 'below' : 'above'
+                ),
+            ];
+
+            return DB::transaction(function () use ($pair, $timeframe, $signalType, $setup, $confidence, $reason) {
+                $signal = Signal::create([
+                    'trading_pair_id'  => $pair->id,
+                    'timeframe'        => $timeframe,
+                    'signal_type'      => $signalType,
+                    'entry_price'      => $setup['entry'],
+                    'stop_loss'        => $setup['sl'],
+                    'take_profit'      => $setup['tp'],
+                    'confidence_score' => $confidence,
+                    'reason'           => $reason,
+                    'status'           => 'active',
+                    'expires_at'       => now()->addHours(config('trading.signals.expiry_hours', 24)),
+                ]);
+
+                SendSignalNotification::dispatch($signal)->onQueue('notifications');
+
+                Log::info("OB+FVG signal: {$signalType} {$pair->symbol} {$timeframe}", [
+                    'confidence' => $confidence,
+                    'entry'      => $setup['entry'],
+                    'sl'         => $setup['sl'],
+                    'tp'         => $setup['tp'],
+                    'fvg_dist'   => $setup['fvg_dist_pct'] . '%',
+                ]);
+
+                return $signal;
+            });
+
+        } catch (\Exception $e) {
+            Log::error("OB+FVG signal generation failed: {$pair->symbol} {$timeframe}", [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
      * Update signal result based on current price.
      * Called by the UpdateSignalResults command.
      *

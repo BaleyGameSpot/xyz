@@ -55,11 +55,21 @@ class GenerateSignals extends Command
                 $this->line("Analyzing {$pair->symbol} / {$timeframe}...");
 
                 try {
+                    // ── Method 1: BOS / CHoCH structure break ──────────────────
                     $signal = $signalService->generateSignal($pair, $timeframe);
                     if ($signal) {
                         $generated++;
-                        $this->info("  ✓ {$signal->signal_type} signal generated (confidence: {$signal->confidence_score}%)");
-                    } else {
+                        $this->info("  ✓ [BOS/CHoCH] {$signal->signal_type} (confidence: {$signal->confidence_score}%)");
+                    }
+
+                    // ── Method 2: OB + FVG retest ──────────────────────────────
+                    $obFvgSignal = $signalService->generateOBFVGSignal($pair, $timeframe);
+                    if ($obFvgSignal) {
+                        $generated++;
+                        $this->info("  ✓ [OB+FVG]    {$obFvgSignal->signal_type} (confidence: {$obFvgSignal->confidence_score}%)");
+                    }
+
+                    if (! $signal && ! $obFvgSignal) {
                         $this->line("  → No signal conditions met");
                     }
                 } catch (\Exception $e) {
