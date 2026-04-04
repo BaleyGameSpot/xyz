@@ -14,7 +14,7 @@ data class Signal(
     @SerializedName("stop_loss") val stopLoss: Double,
     @SerializedName("take_profit") val takeProfit: Double,
     @SerializedName("confidence_score") val confidenceScore: Int,
-    @SerializedName("reason") val reason: SignalReason? = null,
+    @SerializedName("reason_summary") val reason: SignalReason? = null,
     @SerializedName("status") val status: String,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("risk_reward") val riskReward: Double? = null
