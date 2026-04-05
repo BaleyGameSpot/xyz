@@ -172,71 +172,141 @@ class IndicatorService
      * @param  string $direction 'bullish' or 'bearish'
      * @return array             Order block zones ['high', 'low', 'mid', 'index', 'volume', 'valid']
      */
-    public function detectOrderBlocks(array $ohlcv, string $direction): array
+    /**
+     * Detect Order Blocks — aligned with Chinar AllinOne Pine Script.
+     *
+     * How Pine Script creates OBs:
+     * - Bullish OB: fires when close CROSSES ABOVE a pivot high (bullish BOS/CHoCH).
+     *   The OB is the candle at the LOWEST LOW in the range between that pivot high
+     *   and the breakout bar. top = hl2 of that candle (Precise mode), bottom = its low.
+     * - Bearish OB: fires when close CROSSES BELOW a pivot low (bearish BOS/CHoCH).
+     *   The OB is the candle at the HIGHEST HIGH in the same range.
+     *   top = its high, bottom = hl2 of that candle.
+     *
+     * Mitigation (Absolute mode): bullish OB invalid if any subsequent close < ob.low;
+     * bearish OB invalid if any subsequent close > ob.high.
+     *
+     * @param  array  $ohlcv     OHLCV candles oldest→newest
+     * @param  string $direction 'bullish' | 'bearish'
+     * @param  int    $lookback  Pivot lookback (Pine default iLen = 5)
+     * @return array             Up to 3 valid OBs, most recent first
+     */
+    public function detectOrderBlocks(array $ohlcv, string $direction, int $lookback = 5): array
     {
         $orderBlocks = [];
-        $count       = count($ohlcv);
+        $count = count($ohlcv);
 
-        if ($count < 10) {
+        if ($count < $lookback * 2 + 10) {
             return $orderBlocks;
         }
 
-        $currentPrice = $ohlcv[$count - 1]['close'];
+        $closes = array_column($ohlcv, 'close');
+        $highs  = array_column($ohlcv, 'high');
+        $lows   = array_column($ohlcv, 'low');
 
-        for ($i = 5; $i < $count - 2; $i++) {
-            $candle     = $ohlcv[$i];
-            $isBearish  = $candle['close'] < $candle['open'];
-            $isBullish  = $candle['close'] > $candle['open'];
+        $currentClose = (float) $closes[$count - 1];
 
-            if ($direction === 'bullish' && $isBearish) {
-                // Look for a bullish impulse after this bearish candle
-                $impulseFound = false;
-                for ($j = $i + 1; $j < min($i + 5, $count); $j++) {
-                    if ($ohlcv[$j]['close'] > $candle['high']) {
-                        $impulseFound = true;
+        $pivotHighs = $this->calculatePivotHighs($highs, $lookback);
+        $pivotLows  = $this->calculatePivotLows($lows, $lookback);
+
+        if ($direction === 'bullish') {
+            // For each pivot high, find the breakout bar (close crosses above pivot)
+            foreach (array_reverse($pivotHighs, true) as $pivotIdx => $pivotPrice) {
+
+                $breakoutIdx = null;
+                for ($i = $pivotIdx + 1; $i < $count; $i++) {
+                    if ((float) $closes[$i] > $pivotPrice && (float) $closes[$i - 1] <= $pivotPrice) {
+                        $breakoutIdx = $i;
                         break;
                     }
                 }
-                if ($impulseFound) {
-                    $ob = [
-                        'high'   => (float) $candle['high'],
-                        'low'    => (float) $candle['low'],
-                        'mid'    => ((float) $candle['high'] + (float) $candle['low']) / 2,
-                        'open'   => (float) $candle['open'],
-                        'close'  => (float) $candle['close'],
-                        'index'  => $i,
-                        'volume' => (float) ($candle['volume'] ?? 0),
-                        'valid'  => $currentPrice > $candle['low'] && $currentPrice < $candle['high'] * 2,
-                    ];
-                    $orderBlocks[] = $ob;
+                if ($breakoutIdx === null) continue;
+
+                // Find candle at lowest low in range [pivotIdx … breakoutIdx]
+                $lowestLow = PHP_FLOAT_MAX;
+                $obIdx     = $pivotIdx;
+                for ($i = $pivotIdx; $i <= $breakoutIdx; $i++) {
+                    if ((float) $lows[$i] < $lowestLow) {
+                        $lowestLow = (float) $lows[$i];
+                        $obIdx     = $i;
+                    }
                 }
-            } elseif ($direction === 'bearish' && $isBullish) {
-                // Look for a bearish impulse after this bullish candle
-                $impulseFound = false;
-                for ($j = $i + 1; $j < min($i + 5, $count); $j++) {
-                    if ($ohlcv[$j]['close'] < $candle['low']) {
-                        $impulseFound = true;
+
+                // OB dimensions — Precise mode: top = hl2 of OB candle, bottom = lowest low
+                $obTop = ((float) $highs[$obIdx] + (float) $lows[$obIdx]) / 2.0;
+                $obBot = $lowestLow;
+
+                // OB must be below current price (it's a demand zone below market)
+                if ($obTop >= $currentClose) continue;
+
+                // Mitigation: invalidated if any close after breakout went below obBot
+                $mitigated = false;
+                for ($i = $breakoutIdx + 1; $i < $count; $i++) {
+                    if ((float) $closes[$i] < $obBot) { $mitigated = true; break; }
+                }
+                if ($mitigated) continue;
+
+                $orderBlocks[] = [
+                    'high'  => $obTop,
+                    'low'   => $obBot,
+                    'mid'   => ($obTop + $obBot) / 2.0,
+                    'index' => $obIdx,
+                    'volume'=> (float) ($ohlcv[$obIdx]['volume'] ?? 0),
+                ];
+
+                if (count($orderBlocks) >= 3) break;
+            }
+
+        } else {
+            // For each pivot low, find the breakout bar (close crosses below pivot)
+            foreach (array_reverse($pivotLows, true) as $pivotIdx => $pivotPrice) {
+
+                $breakoutIdx = null;
+                for ($i = $pivotIdx + 1; $i < $count; $i++) {
+                    if ((float) $closes[$i] < $pivotPrice && (float) $closes[$i - 1] >= $pivotPrice) {
+                        $breakoutIdx = $i;
                         break;
                     }
                 }
-                if ($impulseFound) {
-                    $ob = [
-                        'high'   => (float) $candle['high'],
-                        'low'    => (float) $candle['low'],
-                        'mid'    => ((float) $candle['high'] + (float) $candle['low']) / 2,
-                        'open'   => (float) $candle['open'],
-                        'close'  => (float) $candle['close'],
-                        'index'  => $i,
-                        'volume' => (float) ($candle['volume'] ?? 0),
-                        'valid'  => $currentPrice > $candle['low'] / 2 && $currentPrice < $candle['high'],
-                    ];
-                    $orderBlocks[] = $ob;
+                if ($breakoutIdx === null) continue;
+
+                // Find candle at highest high in range [pivotIdx … breakoutIdx]
+                $highestHigh = 0.0;
+                $obIdx       = $pivotIdx;
+                for ($i = $pivotIdx; $i <= $breakoutIdx; $i++) {
+                    if ((float) $highs[$i] > $highestHigh) {
+                        $highestHigh = (float) $highs[$i];
+                        $obIdx       = $i;
+                    }
                 }
+
+                // OB dimensions — top = highest high, bottom = hl2 of OB candle
+                $obTop = $highestHigh;
+                $obBot = ((float) $highs[$obIdx] + (float) $lows[$obIdx]) / 2.0;
+
+                // OB must be above current price (it's a supply zone above market)
+                if ($obBot <= $currentClose) continue;
+
+                // Mitigation: invalidated if any close after breakout went above obTop
+                $mitigated = false;
+                for ($i = $breakoutIdx + 1; $i < $count; $i++) {
+                    if ((float) $closes[$i] > $obTop) { $mitigated = true; break; }
+                }
+                if ($mitigated) continue;
+
+                $orderBlocks[] = [
+                    'high'  => $obTop,
+                    'low'   => $obBot,
+                    'mid'   => ($obTop + $obBot) / 2.0,
+                    'index' => $obIdx,
+                    'volume'=> (float) ($ohlcv[$obIdx]['volume'] ?? 0),
+                ];
+
+                if (count($orderBlocks) >= 3) break;
             }
         }
 
-        // Return the 3 most recent order blocks
-        return array_slice(array_reverse($orderBlocks), 0, 3);
+        return $orderBlocks;
     }
 
     /**
@@ -608,24 +678,19 @@ class IndicatorService
     }
 
     /**
-     * Detect OB + FVG retest setups.
+     * Detect OB + FVG retest setups — aligned with Chinar AllinOne Pine Script.
      *
-     * SELL setup: Bearish supply OB above price
-     *             + unfilled "bullish FVG" (gap above price, sitting below the OB)
-     *             + current candle HIGH has reached / entered the FVG → SELL entry
-     *             SL = OB high + ATR buffer
+     * Primary trigger (obtouch alert in Pine Script):
+     *   SELL: candle HIGH enters bearish supply OB from below → ta.crossover(high, ob.btm)
+     *         Entry = ob.low (bottom of supply OB), SL = ob.high + ATR buffer
+     *   BUY:  candle LOW  enters bullish demand OB from above → ta.crossunder(low, ob.top)
+     *         Entry = ob.high (top of demand OB), SL = ob.low − ATR buffer
      *
-     * BUY setup:  Bullish demand OB below price
-     *             + unfilled "bearish FVG" (gap below price, sitting above the OB)
-     *             + current candle LOW has reached / entered the FVG → BUY entry
-     *             SL = OB low − ATR buffer
+     * FVG is optional confluence: if an FVG overlaps the OB, confidence gets a boost
+     * but the signal fires purely on OB touch — no FVG required.
      *
-     * Note on FVG naming (matches our existing detectFVG() output):
-     *   "bullish FVG" → gap created by a DOWN-move; gap sits ABOVE current position
-     *   "bearish FVG" → gap created by an UP-move;   gap sits BELOW current position
-     *
-     * @param  array $ohlcv  Full OHLCV array
-     * @param  float $atr    Current ATR value (for SL buffer)
+     * @param  array $ohlcv   Full OHLCV array
+     * @param  float $atr     Current ATR value (for SL buffer)
      * @param  float $rrRatio Risk:Reward ratio for TP calculation
      * @return array ['sell' => [...setups], 'buy' => [...setups]]
      */
@@ -641,7 +706,6 @@ class IndicatorService
         $currentHigh  = (float) $lastCandle['high'];
         $currentLow   = (float) $lastCandle['low'];
 
-        // Supply OBs (bearish, above price) and demand OBs (bullish, below price)
         $supplyOBs = $this->detectOrderBlocks($ohlcv, 'bearish');
         $demandOBs = $this->detectOrderBlocks($ohlcv, 'bullish');
         $fvgs      = $this->detectFVG($ohlcv);
@@ -649,113 +713,92 @@ class IndicatorService
         $sellSetups = [];
         $buySetups  = [];
 
-        // ── SELL: supply OB above + FVG (gap above price, between price and OB) ─────────
-        // Entry is the FVG bottom — the actual zone level where the short is taken.
-        // Price taping means the candle high is at or near the FVG bottom.
+        // ── SELL: candle high enters bearish supply OB (obtouch) ──────────────────────
+        // Pine Script: ta.crossover(high, ob.btm) — high has reached or crossed ob.low
+        // Entry = ob.low (limit sell at bottom edge of supply OB)
         foreach ($supplyOBs as $ob) {
-            // OB must be strictly above current close
+            // Supply OB must be above current close
             if ($ob['low'] <= $currentClose) {
                 continue;
             }
 
-            foreach ($fvgs['bullish'] as $fvg) {
-                // FVG must sit between current price and the supply OB:
-                //   fvg.bottom > currentClose   (gap starts above current price)
-                //   fvg.top    < ob.low          (gap ends below the OB's bottom)
-                if ($fvg['bottom'] <= $currentClose) {
-                    continue;
-                }
-                if ($fvg['top'] >= $ob['low']) {
-                    continue;
-                }
-
-                // FVG must not be filled: close still below fvg.top
-                if ($currentClose >= $fvg['top']) {
-                    continue;
-                }
-
-                // Proximity check: candle high must be within 2×ATR of FVG bottom.
-                // (Taping = price approaching or entering the sell zone.)
-                if ($currentHigh < $fvg['bottom'] - ($atr * 2.0)) {
-                    continue;
-                }
-
-                // Entry = FVG bottom (the zone level), NOT current close.
-                // This is where the limit SELL order would sit.
-                $entryPrice = $fvg['bottom'];
-                $slPrice    = $ob['high'] + ($atr * 0.3);
-                $risk       = $slPrice - $entryPrice;
-                if ($risk <= 0) {
-                    continue;
-                }
-                $tp = $entryPrice - ($risk * $rrRatio);
-
-                $sellSetups[] = [
-                    'ob'           => $ob,
-                    'fvg'          => $fvg,
-                    'entry'        => round($entryPrice, 8),
-                    'sl'           => round($slPrice, 8),
-                    'tp'           => round($tp, 8),
-                    'fvg_dist_pct' => round(abs($fvg['bottom'] - $currentClose) / $currentClose * 100, 3),
-                    // How far current price is from the entry zone (for priority sorting)
-                    'proximity'    => abs($entryPrice - $currentClose),
-                ];
+            // OB-touch trigger: current candle high reached/entered the OB
+            if ($currentHigh < $ob['low']) {
+                continue;
             }
+
+            $entryPrice = $ob['low'];
+            $slPrice    = $ob['high'] + ($atr * 0.3);
+            $risk       = $slPrice - $entryPrice;
+            if ($risk <= 0) {
+                continue;
+            }
+            $tp = $entryPrice - ($risk * $rrRatio);
+
+            // Optional FVG confluence: bullish FVG overlapping with or adjacent to OB
+            $confluenceFvg = null;
+            foreach ($fvgs['bullish'] as $fvg) {
+                if ($fvg['bottom'] <= $ob['high'] && $fvg['top'] >= $ob['low']) {
+                    $confluenceFvg = $fvg;
+                    break;
+                }
+            }
+
+            $sellSetups[] = [
+                'ob'             => $ob,
+                'fvg'            => $confluenceFvg,
+                'fvg_confluence' => $confluenceFvg !== null,
+                'fvg_dist_pct'   => 0.0,
+                'entry'          => round($entryPrice, 8),
+                'sl'             => round($slPrice, 8),
+                'tp'             => round($tp, 8),
+                'proximity'      => abs($entryPrice - $currentClose),
+            ];
         }
 
-        // ── BUY: demand OB below + FVG (gap below price, between OB and price) ─────────
-        // Entry is the FVG top — the actual zone level where the long is taken.
-        // Price taping means the candle low is at or near the FVG top.
+        // ── BUY: candle low enters bullish demand OB (obtouch) ────────────────────────
+        // Pine Script: ta.crossunder(low, ob.top) — low has reached or crossed ob.high
+        // Entry = ob.high (limit buy at top edge of demand OB)
         foreach ($demandOBs as $ob) {
-            // OB must be strictly below current close
+            // Demand OB must be below current close
             if ($ob['high'] >= $currentClose) {
                 continue;
             }
 
-            foreach ($fvgs['bearish'] as $fvg) {
-                // FVG must sit between the demand OB and current price:
-                //   fvg.top    < currentClose   (gap ends below current price)
-                //   fvg.bottom > ob.high         (gap starts above OB top)
-                if ($fvg['top'] >= $currentClose) {
-                    continue;
-                }
-                if ($fvg['bottom'] <= $ob['high']) {
-                    continue;
-                }
-
-                // FVG must not be filled: close still above fvg.bottom
-                if ($currentClose <= $fvg['bottom']) {
-                    continue;
-                }
-
-                // Proximity check: candle low must be within 2×ATR of FVG top.
-                if ($currentLow > $fvg['top'] + ($atr * 2.0)) {
-                    continue;
-                }
-
-                // Entry = FVG top (the zone level), NOT current close.
-                // This is where the limit BUY order would sit.
-                $entryPrice = $fvg['top'];
-                $slPrice    = $ob['low'] - ($atr * 0.3);
-                $risk       = $entryPrice - $slPrice;
-                if ($risk <= 0) {
-                    continue;
-                }
-                $tp = $entryPrice + ($risk * $rrRatio);
-
-                $buySetups[] = [
-                    'ob'           => $ob,
-                    'fvg'          => $fvg,
-                    'entry'        => round($entryPrice, 8),
-                    'sl'           => round($slPrice, 8),
-                    'tp'           => round($tp, 8),
-                    'fvg_dist_pct' => round(abs($currentClose - $fvg['top']) / $currentClose * 100, 3),
-                    'proximity'    => abs($entryPrice - $currentClose),
-                ];
+            // OB-touch trigger: current candle low dipped into or touched the OB
+            if ($currentLow > $ob['high']) {
+                continue;
             }
+
+            $entryPrice = $ob['high'];
+            $slPrice    = $ob['low'] - ($atr * 0.3);
+            $risk       = $entryPrice - $slPrice;
+            if ($risk <= 0) {
+                continue;
+            }
+            $tp = $entryPrice + ($risk * $rrRatio);
+
+            // Optional FVG confluence: bearish FVG overlapping with or adjacent to OB
+            $confluenceFvg = null;
+            foreach ($fvgs['bearish'] as $fvg) {
+                if ($fvg['bottom'] <= $ob['high'] && $fvg['top'] >= $ob['low']) {
+                    $confluenceFvg = $fvg;
+                    break;
+                }
+            }
+
+            $buySetups[] = [
+                'ob'             => $ob,
+                'fvg'            => $confluenceFvg,
+                'fvg_confluence' => $confluenceFvg !== null,
+                'fvg_dist_pct'   => 0.0,
+                'entry'          => round($entryPrice, 8),
+                'sl'             => round($slPrice, 8),
+                'tp'             => round($tp, 8),
+                'proximity'      => abs($entryPrice - $currentClose),
+            ];
         }
 
-        // Sort each list by proximity: setups closest to current price first
         usort($sellSetups, fn($a, $b) => $a['proximity'] <=> $b['proximity']);
         usort($buySetups,  fn($a, $b) => $a['proximity'] <=> $b['proximity']);
 

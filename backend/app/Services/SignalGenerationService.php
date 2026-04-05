@@ -448,6 +448,10 @@ class SignalGenerationService
             if ($emaTrend === $signalDir) {
                 $confidence += 10;
             }
+            // FVG overlapping with OB = extra confluence (OB+FVG stacked)
+            if (! empty($setup['fvg_confluence'])) {
+                $confidence += 5;
+            }
             $confidence = min(100, $confidence);
 
             if ($confidence < config('trading.signals.min_confidence', 40)) {
@@ -468,34 +472,36 @@ class SignalGenerationService
             }
 
             // ── Reason JSON ─────────────────────────────────────────────────────
+            $hasFvg = ! empty($setup['fvg_confluence']) && $setup['fvg'] !== null;
             $reason = [
-                'type'             => 'OB_FVG_RETEST',
-                'ob_zone'          => ['high' => $setup['ob']['high'], 'low' => $setup['ob']['low']],
-                'fvg_zone'         => ['top'  => $setup['fvg']['top'], 'bottom' => $setup['fvg']['bottom']],
-                'fvg_dist_pct'     => $setup['fvg_dist_pct'],
-                'ema_trend'        => $emaTrend,
-                'mtf_trend_data'   => $mtfTrend,
+                'type'           => 'OB_FVG_RETEST',
+                'ob_zone'        => ['high' => $setup['ob']['high'], 'low' => $setup['ob']['low']],
+                'fvg_zone'       => $hasFvg
+                    ? ['top' => $setup['fvg']['top'], 'bottom' => $setup['fvg']['bottom']]
+                    : null,
+                'fvg_confluence' => $hasFvg,
+                'ema_trend'      => $emaTrend,
+                'mtf_trend_data' => $mtfTrend,
                 // Simplified fields for mobile display
-                'market_structure' => ($signalType === 'BUY' ? 'Bullish' : 'Bearish') . ' OB + FVG Retest',
+                'market_structure' => ($signalType === 'BUY' ? 'Bullish' : 'Bearish') . ' OB Retest' . ($hasFvg ? ' + FVG' : ''),
                 'order_block'      => sprintf(
                     '%s OB: %.6f – %.6f',
                     $signalType === 'BUY' ? 'Demand' : 'Supply',
                     $setup['ob']['low'],
                     $setup['ob']['high']
                 ),
-                'fvg'              => sprintf(
-                    'FVG zone: %.6f – %.6f (%.3f%% from entry)',
-                    $setup['fvg']['bottom'],
-                    $setup['fvg']['top'],
-                    $setup['fvg_dist_pct']
-                ),
-                'mtf_trend'        => isset($mtfTrend['1h'], $mtfTrend['4h'])
+                'fvg'            => $hasFvg
+                    ? sprintf('FVG confluence: %.6f – %.6f', $setup['fvg']['bottom'], $setup['fvg']['top'])
+                    : null,
+                'mtf_trend'      => isset($mtfTrend['1h'], $mtfTrend['4h'])
                     ? "1h: {$mtfTrend['1h']}, 4h: {$mtfTrend['4h']}"
                     : 'MTF data unavailable',
-                'summary'          => sprintf(
-                    '%s signal: price taping FVG below %s OB. Confidence %d%%. SL placed %s OB.',
+                'summary'        => sprintf(
+                    '%s signal: price touching %s OB at %.6f.%s Confidence %d%%. SL %s OB.',
                     $signalType,
                     $signalType === 'BUY' ? 'demand' : 'supply',
+                    $setup['entry'],
+                    $hasFvg ? ' FVG confluence present.' : '',
                     $confidence,
                     $signalType === 'BUY' ? 'below' : 'above'
                 ),
@@ -518,11 +524,11 @@ class SignalGenerationService
                 SendSignalNotification::dispatch($signal)->onQueue('notifications');
 
                 Log::info("OB+FVG signal: {$signalType} {$pair->symbol} {$timeframe}", [
-                    'confidence' => $confidence,
-                    'entry'      => $setup['entry'],
-                    'sl'         => $setup['sl'],
-                    'tp'         => $setup['tp'],
-                    'fvg_dist'   => $setup['fvg_dist_pct'] . '%',
+                    'confidence'     => $confidence,
+                    'entry'          => $setup['entry'],
+                    'sl'             => $setup['sl'],
+                    'tp'             => $setup['tp'],
+                    'fvg_confluence' => $setup['fvg_confluence'] ? 'yes' : 'no',
                 ]);
 
                 return $signal;
