@@ -113,9 +113,19 @@ class Signal extends Model
         return abs((float) $this->entry_price - (float) $this->stop_loss);
     }
 
-    protected $appends = ['pair', 'reason_summary'];
+    protected $appends = ['pair', 'reason_summary', 'signal_method'];
 
     // Blade-friendly accessors
+
+    /**
+     * Returns which method generated this signal: "BOS/CHoCH" or "OB+FVG Retest"
+     */
+    public function getSignalMethodAttribute(): string
+    {
+        $r = is_array($this->reason) ? $this->reason : [];
+        return ($r['type'] ?? '') === 'OB_FVG_RETEST' ? 'OB+FVG Retest' : 'BOS/CHoCH';
+    }
+
     public function getPairAttribute(): string
     {
         return $this->tradingPair->symbol ?? '';

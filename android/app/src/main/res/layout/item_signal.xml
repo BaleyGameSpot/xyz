@@ -96,6 +96,19 @@
                     android:fontFamily="sans-serif-medium"
                     tools:text="1H" />
 
+                <!-- Signal method chip -->
+                <TextView
+                    android:id="@+id/tvSignalMethod"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_card_elevated"
+                    android:paddingHorizontal="7dp"
+                    android:paddingVertical="4dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    tools:text="BOS/CHoCH" />
+
                 <!-- Entry price -->
                 <TextView
                     android:id="@+id/tvEntryPreview"

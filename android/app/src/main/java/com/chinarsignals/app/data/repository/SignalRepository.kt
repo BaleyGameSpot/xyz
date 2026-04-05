@@ -74,6 +74,20 @@ class SignalRepository @Inject constructor(
         }
     }
 
+    fun markSignalStatus(id: Int, status: String): Flow<Resource<Signal>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = apiService.markSignalStatus(id, mapOf("status" to status))
+            if (response.isSuccessful && response.body()?.success == true) {
+                emit(Resource.Success(response.body()!!.data!!))
+            } else {
+                emit(Resource.Error(response.body()?.message ?: "Failed to update status"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Network error"))
+        }
+    }
+
     fun getPairs(): Flow<Resource<List<TradingPair>>> = flow {
         emit(Resource.Loading())
         try {

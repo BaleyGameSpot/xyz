@@ -116,6 +116,20 @@
 
                                 </LinearLayout>
 
+                                <!-- Signal method badge -->
+                                <TextView
+                                    android:id="@+id/tvSignalMethod"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:background="@drawable/bg_card_elevated"
+                                    android:paddingHorizontal="10dp"
+                                    android:paddingVertical="5dp"
+                                    android:textColor="@color/accent_gold"
+                                    android:textSize="11sp"
+                                    android:fontFamily="sans-serif-medium"
+                                    tools:text="BOS/CHoCH" />
+
                             </LinearLayout>
 
                             <TextView
@@ -605,6 +619,100 @@
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         tools:text="Strong bullish confluence — market structure BOS, order block support and multi-timeframe alignment confirm entry. Tight SL for favourable R:R." />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ─── Mark Result Card (admin only) ────────── -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMarkResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/bg_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="16dp">
+
+                        <View
+                            android:layout_width="3dp"
+                            android:layout_height="14dp"
+                            android:background="@color/accent_gold"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            style="@style/TextAppearance.ChinarSignals.SectionLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MARK RESULT" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnMarkWin"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="6dp"
+                            android:text="WIN"
+                            android:textSize="13sp"
+                            app:backgroundTint="@color/accent_green"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnMarkLoss"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="LOSS"
+                            android:textSize="13sp"
+                            app:backgroundTint="@color/accent_red"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnMarkPending"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="6dp"
+                            android:text="RESET"
+                            android:textSize="13sp"
+                            app:backgroundTint="@color/neutral_gray"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvMarkResultMsg"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:textSize="12sp"
+                        android:textColor="@color/accent_green"
+                        android:gravity="center"
+                        android:visibility="gone" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

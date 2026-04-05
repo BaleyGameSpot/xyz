@@ -17,7 +17,8 @@ data class Signal(
     @SerializedName("reason_summary") val reason: SignalReason? = null,
     @SerializedName("status") val status: String,
     @SerializedName("created_at") val createdAt: String,
-    @SerializedName("risk_reward") val riskReward: Double? = null
+    @SerializedName("risk_reward") val riskReward: Double? = null,
+    @SerializedName("signal_method") val signalMethod: String? = null
 ) : Parcelable {
     fun isBuy(): Boolean = signalType.equals("BUY", ignoreCase = true)
     fun isSell(): Boolean = signalType.equals("SELL", ignoreCase = true)

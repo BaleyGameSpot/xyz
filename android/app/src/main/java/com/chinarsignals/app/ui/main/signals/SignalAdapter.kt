@@ -55,6 +55,9 @@ class SignalAdapter(
                 binding.tvConfidence.setTextColor(ContextCompat.getColor(context, R.color.accent_red))
             }
 
+            // Signal method chip
+            binding.tvSignalMethod.text = signal.signalMethod ?: "BOS/CHoCH"
+
             // Entry price preview
             binding.tvEntryPreview.text = "Entry  ${signal.entryPrice}"
 

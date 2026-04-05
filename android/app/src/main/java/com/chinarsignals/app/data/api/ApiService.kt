@@ -62,6 +62,13 @@ interface ApiService {
         @Body request: PaymentVerifyRequest
     ): Response<ApiResponse<SubscriptionStatus>>
 
+    // ─── Admin: Signal Status ───────────────────────────────────────────────
+    @POST("api/admin/signals/{id}/mark")
+    suspend fun markSignalStatus(
+        @Path("id") id: Int,
+        @Body body: Map<String, String>
+    ): Response<ApiResponse<Signal>>
+
     // ─── User ───────────────────────────────────────────────────────────────
     @PUT("api/user/fcm-token")
     suspend fun updateFcmToken(@Body request: FcmTokenRequest): Response<ApiResponse<Unit>>
