@@ -365,14 +365,45 @@ class SignalGenerationService
             $atr       = $this->indicatorService->calculateATR($ohlcv, $atrLength);
             $setups    = $this->indicatorService->detectOBFVGSetup($ohlcv, $atr, $rrRatio);
 
-            // Pick the strongest setup (sell takes priority; use first match)
+            // ── MTF fetch (used for direction selection AND hard block) ────────
+            $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
+            $h1Trend  = $mtfTrend['1h'] ?? null;
+            $h4Trend  = $mtfTrend['4h'] ?? null;
+
+            // ── Direction selection based on market structure ──────────────────
+            // Priority: use H1/H4 trend to decide which setup to take.
+            // If H1 is bullish → prefer BUY setups.  If H1 bearish → prefer SELL.
+            // If H1 is neutral → use the closer setup (lowest proximity).
             $signalType = null;
             $setup      = null;
 
-            if (! empty($setups['sell'])) {
+            $hasSell = ! empty($setups['sell']);
+            $hasBuy  = ! empty($setups['buy']);
+
+            if ($hasSell && $hasBuy) {
+                // Both directions have valid setups — let H1 trend decide
+                if ($h1Trend === 'bullish') {
+                    $signalType = 'BUY';
+                    $setup      = $setups['buy'][0];
+                } elseif ($h1Trend === 'bearish') {
+                    $signalType = 'SELL';
+                    $setup      = $setups['sell'][0];
+                } else {
+                    // Neutral H1: pick the setup whose entry is closest to current price
+                    $closestSell = $setups['sell'][0]['proximity'];
+                    $closestBuy  = $setups['buy'][0]['proximity'];
+                    if ($closestBuy <= $closestSell) {
+                        $signalType = 'BUY';
+                        $setup      = $setups['buy'][0];
+                    } else {
+                        $signalType = 'SELL';
+                        $setup      = $setups['sell'][0];
+                    }
+                }
+            } elseif ($hasSell) {
                 $signalType = 'SELL';
                 $setup      = $setups['sell'][0];
-            } elseif (! empty($setups['buy'])) {
+            } elseif ($hasBuy) {
                 $signalType = 'BUY';
                 $setup      = $setups['buy'][0];
             }
@@ -383,12 +414,7 @@ class SignalGenerationService
 
             $signalDir = $signalType === 'BUY' ? 'bullish' : 'bearish';
 
-            // ── MTF fetch (needed for both the hard block and confidence) ────────
-            $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
-
             // Hard counter-trend filter: never trade OB+FVG against a clear H1 trend.
-            // If H1 is bullish → SELL signals are invalid; if H1 is bearish → BUY invalid.
-            $h1Trend = $mtfTrend['1h'] ?? null;
             if ($h1Trend !== null && $h1Trend !== 'neutral' && $h1Trend !== $signalDir) {
                 Log::info("OB+FVG skipped (counter-H1): {$signalType} {$pair->symbol} {$timeframe} H1={$h1Trend}");
                 return null;

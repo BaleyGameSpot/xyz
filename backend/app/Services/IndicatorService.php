@@ -649,17 +649,19 @@ class IndicatorService
         $sellSetups = [];
         $buySetups  = [];
 
-        // ── SELL: supply OB above + bullish FVG (gap above price) + price taping ───────
+        // ── SELL: supply OB above + FVG (gap above price, between price and OB) ─────────
+        // Entry is the FVG bottom — the actual zone level where the short is taken.
+        // Price taping means the candle high is at or near the FVG bottom.
         foreach ($supplyOBs as $ob) {
-            // OB must be above current price
-            if ($ob['low'] <= $currentPrice = $currentClose) {
+            // OB must be strictly above current close
+            if ($ob['low'] <= $currentClose) {
                 continue;
             }
 
             foreach ($fvgs['bullish'] as $fvg) {
-                // FVG must be BETWEEN current price and OB:
-                //   fvg.bottom > currentClose  (gap starts above price)
-                //   fvg.top    < ob.low        (gap ends below OB bottom)
+                // FVG must sit between current price and the supply OB:
+                //   fvg.bottom > currentClose   (gap starts above current price)
+                //   fvg.top    < ob.low          (gap ends below the OB's bottom)
                 if ($fvg['bottom'] <= $currentClose) {
                     continue;
                 }
@@ -667,45 +669,53 @@ class IndicatorService
                     continue;
                 }
 
-                // FVG must not already be filled (close must be below fvg.top)
+                // FVG must not be filled: close still below fvg.top
                 if ($currentClose >= $fvg['top']) {
                     continue;
                 }
 
-                // "Taping": current candle high has touched or entered the FVG
-                if ($currentHigh < $fvg['bottom']) {
+                // Proximity check: candle high must be within 2×ATR of FVG bottom.
+                // (Taping = price approaching or entering the sell zone.)
+                if ($currentHigh < $fvg['bottom'] - ($atr * 2.0)) {
                     continue;
                 }
 
-                $slPrice  = $ob['high'] + ($atr * 0.3);
-                $risk     = $slPrice - $currentClose;
+                // Entry = FVG bottom (the zone level), NOT current close.
+                // This is where the limit SELL order would sit.
+                $entryPrice = $fvg['bottom'];
+                $slPrice    = $ob['high'] + ($atr * 0.3);
+                $risk       = $slPrice - $entryPrice;
                 if ($risk <= 0) {
                     continue;
                 }
-                $tp = $currentClose - ($risk * $rrRatio);
+                $tp = $entryPrice - ($risk * $rrRatio);
 
                 $sellSetups[] = [
-                    'ob'          => $ob,
-                    'fvg'         => $fvg,
-                    'entry'       => round($currentClose, 8),
-                    'sl'          => round($slPrice, 8),
-                    'tp'          => round($tp, 8),
-                    'fvg_dist_pct'=> round(abs($fvg['bottom'] - $currentClose) / $currentClose * 100, 3),
+                    'ob'           => $ob,
+                    'fvg'          => $fvg,
+                    'entry'        => round($entryPrice, 8),
+                    'sl'           => round($slPrice, 8),
+                    'tp'           => round($tp, 8),
+                    'fvg_dist_pct' => round(abs($fvg['bottom'] - $currentClose) / $currentClose * 100, 3),
+                    // How far current price is from the entry zone (for priority sorting)
+                    'proximity'    => abs($entryPrice - $currentClose),
                 ];
             }
         }
 
-        // ── BUY: demand OB below + bearish FVG (gap below price) + price taping ────────
+        // ── BUY: demand OB below + FVG (gap below price, between OB and price) ─────────
+        // Entry is the FVG top — the actual zone level where the long is taken.
+        // Price taping means the candle low is at or near the FVG top.
         foreach ($demandOBs as $ob) {
-            // OB must be below current price
+            // OB must be strictly below current close
             if ($ob['high'] >= $currentClose) {
                 continue;
             }
 
             foreach ($fvgs['bearish'] as $fvg) {
-                // FVG must be BETWEEN OB and current price:
-                //   fvg.top    < currentClose  (gap ends below price)
-                //   fvg.bottom > ob.high       (gap starts above OB top)
+                // FVG must sit between the demand OB and current price:
+                //   fvg.top    < currentClose   (gap ends below current price)
+                //   fvg.bottom > ob.high         (gap starts above OB top)
                 if ($fvg['top'] >= $currentClose) {
                     continue;
                 }
@@ -713,33 +723,41 @@ class IndicatorService
                     continue;
                 }
 
-                // FVG must not already be filled (close must be above fvg.bottom)
+                // FVG must not be filled: close still above fvg.bottom
                 if ($currentClose <= $fvg['bottom']) {
                     continue;
                 }
 
-                // "Taping": current candle low has touched or entered the FVG
-                if ($currentLow > $fvg['top']) {
+                // Proximity check: candle low must be within 2×ATR of FVG top.
+                if ($currentLow > $fvg['top'] + ($atr * 2.0)) {
                     continue;
                 }
 
-                $slPrice = $ob['low'] - ($atr * 0.3);
-                $risk    = $currentClose - $slPrice;
+                // Entry = FVG top (the zone level), NOT current close.
+                // This is where the limit BUY order would sit.
+                $entryPrice = $fvg['top'];
+                $slPrice    = $ob['low'] - ($atr * 0.3);
+                $risk       = $entryPrice - $slPrice;
                 if ($risk <= 0) {
                     continue;
                 }
-                $tp = $currentClose + ($risk * $rrRatio);
+                $tp = $entryPrice + ($risk * $rrRatio);
 
                 $buySetups[] = [
-                    'ob'          => $ob,
-                    'fvg'         => $fvg,
-                    'entry'       => round($currentClose, 8),
-                    'sl'          => round($slPrice, 8),
-                    'tp'          => round($tp, 8),
-                    'fvg_dist_pct'=> round(abs($currentClose - $fvg['top']) / $currentClose * 100, 3),
+                    'ob'           => $ob,
+                    'fvg'          => $fvg,
+                    'entry'        => round($entryPrice, 8),
+                    'sl'           => round($slPrice, 8),
+                    'tp'           => round($tp, 8),
+                    'fvg_dist_pct' => round(abs($currentClose - $fvg['top']) / $currentClose * 100, 3),
+                    'proximity'    => abs($entryPrice - $currentClose),
                 ];
             }
         }
+
+        // Sort each list by proximity: setups closest to current price first
+        usort($sellSetups, fn($a, $b) => $a['proximity'] <=> $b['proximity']);
+        usort($buySetups,  fn($a, $b) => $a['proximity'] <=> $b['proximity']);
 
         return [
             'sell' => $sellSetups,
