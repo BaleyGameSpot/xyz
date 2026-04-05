@@ -381,6 +381,19 @@ class SignalGenerationService
                 return null;
             }
 
+            $signalDir = $signalType === 'BUY' ? 'bullish' : 'bearish';
+
+            // ── MTF fetch (needed for both the hard block and confidence) ────────
+            $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
+
+            // Hard counter-trend filter: never trade OB+FVG against a clear H1 trend.
+            // If H1 is bullish → SELL signals are invalid; if H1 is bearish → BUY invalid.
+            $h1Trend = $mtfTrend['1h'] ?? null;
+            if ($h1Trend !== null && $h1Trend !== 'neutral' && $h1Trend !== $signalDir) {
+                Log::info("OB+FVG skipped (counter-H1): {$signalType} {$pair->symbol} {$timeframe} H1={$h1Trend}");
+                return null;
+            }
+
             // ── Confidence scoring ──────────────────────────────────────────────
             // Base 65: having a stacked OB+FVG is itself a strong confluenced setup
             $count     = count($ohlcv);
@@ -398,9 +411,6 @@ class SignalGenerationService
             } elseif ($lastClose < $smmaLast && $zlemaLast < $smmaLast) {
                 $emaTrend = 'bearish';
             }
-
-            $mtfTrend  = $this->getMTFTrend($pair->symbol, $timeframe);
-            $signalDir = $signalType === 'BUY' ? 'bullish' : 'bearish';
 
             $confidence = 65;
             if (isset($mtfTrend['1h']) && $mtfTrend['1h'] === $signalDir) {
