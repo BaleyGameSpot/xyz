@@ -340,11 +340,16 @@ class SignalGenerationService
     }
 
     /**
-     * Generate a signal using the OB + FVG retest method.
+     * Generate an advance OB limit order signal — no TradingView required.
      *
-     * Runs parallel to generateSignal() (BOS/CHoCH method).
-     * Signal fires when a candle TAPES into an FVG that sits between
-     * the current price and a stacked Order Block.
+     * Detects valid BOS/CHoCH-linked Order Blocks from live Binance data and
+     * creates a PENDING signal at the OB zone level. Price does NOT need to
+     * be touching the OB yet — the signal is an advance limit order.
+     *
+     * Status lifecycle:
+     *   pending  → price has not yet returned to OB zone (limit order waiting)
+     *   active   → price entered the OB zone (activatePendingSignals() promotes it)
+     *   win/loss → SL or TP hit (updateSignalResult() handles)
      *
      * @param  TradingPair $pair
      * @param  string      $timeframe
@@ -353,104 +358,119 @@ class SignalGenerationService
     public function generateOBFVGSignal(TradingPair $pair, string $timeframe): ?Signal
     {
         try {
-            $limit = config('trading.indicators.candle_limit', 200);
-            $ohlcv = $this->marketDataService->getOHLCV($pair->symbol, $timeframe, $limit);
+            $ohlcv = $this->marketDataService->getOHLCV(
+                $pair->symbol,
+                $timeframe,
+                config('trading.indicators.candle_limit', 200)
+            );
 
             if (count($ohlcv) < 60) {
                 return null;
             }
 
-            $atrLength = config('trading.indicators.atr_length', 14);
-            $rrRatio   = config('trading.signals.risk_reward_ratio', 2.0);
-            $atr       = $this->indicatorService->calculateATR($ohlcv, $atrLength);
-            $setups    = $this->indicatorService->detectOBFVGSetup($ohlcv, $atr, $rrRatio);
+            $count        = count($ohlcv);
+            $currentClose = (float) $ohlcv[$count - 1]['close'];
+            $atr          = $this->indicatorService->calculateATR($ohlcv, config('trading.indicators.atr_length', 14));
+            $rrRatio      = config('trading.signals.risk_reward_ratio', 2.0);
 
-            // ── MTF fetch (used for direction selection AND hard block) ────────
+            // ── MTF trend for direction filtering ────────────────────────────
             $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
-            $h1Trend  = $mtfTrend['1h'] ?? null;
-            $h4Trend  = $mtfTrend['4h'] ?? null;
+            $h1Trend  = $mtfTrend['1h'] ?? 'neutral';
 
-            // ── Direction selection based on market structure ──────────────────
-            // Priority: use H1/H4 trend to decide which setup to take.
-            // If H1 is bullish → prefer BUY setups.  If H1 bearish → prefer SELL.
-            // If H1 is neutral → use the closer setup (lowest proximity).
-            $signalType = null;
-            $setup      = null;
+            // ── Detect valid BOS/CHoCH-linked OBs ────────────────────────────
+            $bullishOBs = ($h1Trend !== 'bearish')
+                ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bullish')
+                : [];
+            $bearishOBs = ($h1Trend !== 'bullish')
+                ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bearish')
+                : [];
 
-            $hasSell = ! empty($setups['sell']);
-            $hasBuy  = ! empty($setups['buy']);
+            // ── Build candidate limit-order setups ────────────────────────────
+            $candidates = [];
 
-            if ($hasSell && $hasBuy) {
-                // Both directions have valid setups — let H1 trend decide
-                if ($h1Trend === 'bullish') {
-                    $signalType = 'BUY';
-                    $setup      = $setups['buy'][0];
-                } elseif ($h1Trend === 'bearish') {
-                    $signalType = 'SELL';
-                    $setup      = $setups['sell'][0];
-                } else {
-                    // Neutral H1: pick the setup whose entry is closest to current price
-                    $closestSell = $setups['sell'][0]['proximity'];
-                    $closestBuy  = $setups['buy'][0]['proximity'];
-                    if ($closestBuy <= $closestSell) {
-                        $signalType = 'BUY';
-                        $setup      = $setups['buy'][0];
-                    } else {
-                        $signalType = 'SELL';
-                        $setup      = $setups['sell'][0];
-                    }
-                }
-            } elseif ($hasSell) {
-                $signalType = 'SELL';
-                $setup      = $setups['sell'][0];
-            } elseif ($hasBuy) {
-                $signalType = 'BUY';
-                $setup      = $setups['buy'][0];
+            foreach ($bullishOBs as $ob) {
+                $entry = $ob['high'];
+                $sl    = $ob['low'] - ($atr * 0.3);
+                $risk  = $entry - $sl;
+                if ($risk <= 0) continue;
+                $candidates[] = [
+                    'type'      => 'BUY',
+                    'ob'        => $ob,
+                    'entry'     => round($entry, 8),
+                    'sl'        => round($sl, 8),
+                    'tp'        => round($entry + ($risk * $rrRatio), 8),
+                    'dir'       => 'bullish',
+                    'proximity' => abs($entry - $currentClose),
+                ];
+                break; // only the most-recent bullish OB
             }
 
-            if (! $setup) {
+            foreach ($bearishOBs as $ob) {
+                $entry = $ob['low'];
+                $sl    = $ob['high'] + ($atr * 0.3);
+                $risk  = $sl - $entry;
+                if ($risk <= 0) continue;
+                $candidates[] = [
+                    'type'      => 'SELL',
+                    'ob'        => $ob,
+                    'entry'     => round($entry, 8),
+                    'sl'        => round($sl, 8),
+                    'tp'        => round($entry - ($risk * $rrRatio), 8),
+                    'dir'       => 'bearish',
+                    'proximity' => abs($entry - $currentClose),
+                ];
+                break; // only the most-recent bearish OB
+            }
+
+            if (empty($candidates)) {
                 return null;
             }
 
-            $signalDir = $signalType === 'BUY' ? 'bullish' : 'bearish';
+            // Pick the OB closest to current price
+            usort($candidates, fn($a, $b) => $a['proximity'] <=> $b['proximity']);
+            $best = $candidates[0];
 
-            // Hard counter-trend filter: never trade OB+FVG against a clear H1 trend.
-            if ($h1Trend !== null && $h1Trend !== 'neutral' && $h1Trend !== $signalDir) {
-                Log::info("OB+FVG skipped (counter-H1): {$signalType} {$pair->symbol} {$timeframe} H1={$h1Trend}");
+            // ── Duplicate guard: skip if pending/active signal already at this OB ─
+            $tol      = $best['entry'] * 0.002; // 0.2% tolerance
+            $existing = Signal::where('trading_pair_id', $pair->id)
+                ->where('timeframe', $timeframe)
+                ->where('signal_type', $best['type'])
+                ->whereIn('status', ['pending', 'active'])
+                ->whereBetween('entry_price', [$best['entry'] - $tol, $best['entry'] + $tol])
+                ->exists();
+
+            if ($existing) {
                 return null;
             }
 
-            // ── Confidence scoring ──────────────────────────────────────────────
-            // Base 65: having a stacked OB+FVG is itself a strong confluenced setup
-            $count     = count($ohlcv);
+            // ── Confidence scoring ────────────────────────────────────────────
             $closes    = array_map(fn($c) => (float) $c['close'], $ohlcv);
             $emaLength = config('trading.indicators.ema_length', 34);
             $smma      = $this->indicatorService->calculateSMMA($closes, $emaLength);
             $zlema     = $this->indicatorService->calculateZLEMA($closes, $emaLength);
             $smmaLast  = $smma[$count - 1] ?? 0;
             $zlemaLast = $zlema[$count - 1] ?? 0;
-            $lastClose = $closes[$count - 1];
 
             $emaTrend = 'neutral';
-            if ($lastClose > $smmaLast && $zlemaLast > $smmaLast) {
-                $emaTrend = 'bullish';
-            } elseif ($lastClose < $smmaLast && $zlemaLast < $smmaLast) {
-                $emaTrend = 'bearish';
-            }
+            if ($currentClose > $smmaLast && $zlemaLast > $smmaLast) $emaTrend = 'bullish';
+            elseif ($currentClose < $smmaLast && $zlemaLast < $smmaLast) $emaTrend = 'bearish';
 
-            $confidence = 65;
-            if (isset($mtfTrend['1h']) && $mtfTrend['1h'] === $signalDir) {
-                $confidence += 15;
-            }
-            if (isset($mtfTrend['4h']) && $mtfTrend['4h'] === $signalDir) {
-                $confidence += 10;
-            }
-            if ($emaTrend === $signalDir) {
-                $confidence += 10;
-            }
-            // FVG overlapping with OB = extra confluence (OB+FVG stacked)
-            if (! empty($setup['fvg_confluence'])) {
-                $confidence += 5;
+            $signalDir  = $best['dir'];
+            $confidence = 60;
+            if (($mtfTrend['1h'] ?? null) === $signalDir) $confidence += 15;
+            if (($mtfTrend['4h'] ?? null) === $signalDir) $confidence += 10;
+            if ($emaTrend === $signalDir)                  $confidence += 10;
+
+            // Optional FVG confluence overlapping OB
+            $fvgs      = $this->indicatorService->detectFVG($ohlcv);
+            $fvgKey    = $best['type'] === 'BUY' ? 'bearish' : 'bullish';
+            $hasFvg    = false;
+            foreach ($fvgs[$fvgKey] ?? [] as $fvg) {
+                if ($fvg['bottom'] <= $best['ob']['high'] && $fvg['top'] >= $best['ob']['low']) {
+                    $hasFvg = true;
+                    $confidence += 5;
+                    break;
+                }
             }
             $confidence = min(100, $confidence);
 
@@ -458,88 +478,130 @@ class SignalGenerationService
                 return null;
             }
 
-            // ── Duplicate guard (same method, same direction within 2 h) ────────
-            $recentSignal = Signal::where('trading_pair_id', $pair->id)
-                ->where('timeframe', $timeframe)
-                ->where('signal_type', $signalType)
-                ->where('status', 'active')
-                ->where('created_at', '>=', now()->subHours(2))
-                ->first();
-
-            if ($recentSignal) {
-                Log::debug("OB+FVG duplicate suppressed: {$signalType} {$pair->symbol} {$timeframe}");
-                return null;
-            }
-
-            // ── Reason JSON ─────────────────────────────────────────────────────
-            $hasFvg = ! empty($setup['fvg_confluence']) && $setup['fvg'] !== null;
-            $reason = [
-                'type'           => 'OB_FVG_RETEST',
-                'ob_zone'        => ['high' => $setup['ob']['high'], 'low' => $setup['ob']['low']],
-                'fvg_zone'       => $hasFvg
-                    ? ['top' => $setup['fvg']['top'], 'bottom' => $setup['fvg']['bottom']]
-                    : null,
-                'fvg_confluence' => $hasFvg,
-                'ema_trend'      => $emaTrend,
-                'mtf_trend_data' => $mtfTrend,
-                // Simplified fields for mobile display
-                'market_structure' => ($signalType === 'BUY' ? 'Bullish' : 'Bearish') . ' OB Retest' . ($hasFvg ? ' + FVG' : ''),
-                'order_block'      => sprintf(
-                    '%s OB: %.6f – %.6f',
-                    $signalType === 'BUY' ? 'Demand' : 'Supply',
-                    $setup['ob']['low'],
-                    $setup['ob']['high']
-                ),
-                'fvg'            => $hasFvg
-                    ? sprintf('FVG confluence: %.6f – %.6f', $setup['fvg']['bottom'], $setup['fvg']['top'])
-                    : null,
-                'mtf_trend'      => isset($mtfTrend['1h'], $mtfTrend['4h'])
-                    ? "1h: {$mtfTrend['1h']}, 4h: {$mtfTrend['4h']}"
-                    : 'MTF data unavailable',
-                'summary'        => sprintf(
-                    '%s signal: price touching %s OB at %.6f.%s Confidence %d%%. SL %s OB.',
-                    $signalType,
-                    $signalType === 'BUY' ? 'demand' : 'supply',
-                    $setup['entry'],
-                    $hasFvg ? ' FVG confluence present.' : '',
-                    $confidence,
-                    $signalType === 'BUY' ? 'below' : 'above'
+            // ── Build reason JSON ─────────────────────────────────────────────
+            $obLabel = $best['type'] === 'BUY' ? 'Demand' : 'Supply';
+            $reason  = [
+                'type'             => 'OB_FVG_RETEST',
+                'ob_zone'          => ['high' => $best['ob']['high'], 'low' => $best['ob']['low']],
+                'fvg_confluence'   => $hasFvg,
+                'ema_trend'        => $emaTrend,
+                'mtf_trend_data'   => $mtfTrend,
+                'market_structure' => ($best['type'] === 'BUY' ? 'Bullish' : 'Bearish')
+                                      . ' OB – Limit Order' . ($hasFvg ? ' + FVG' : ''),
+                'order_block'      => sprintf('%s OB: %.6f – %.6f', $obLabel, $best['ob']['low'], $best['ob']['high']),
+                'fvg'              => $hasFvg ? 'FVG confluence present' : null,
+                'mtf_trend'        => isset($mtfTrend['1h'], $mtfTrend['4h'])
+                                      ? "1h: {$mtfTrend['1h']}, 4h: {$mtfTrend['4h']}"
+                                      : 'MTF data unavailable',
+                'summary'          => sprintf(
+                    '%s limit order at %.6f (OB zone %.6f–%.6f). Waiting for price to return to zone.',
+                    $best['type'], $best['entry'], $best['ob']['low'], $best['ob']['high']
                 ),
             ];
 
-            return DB::transaction(function () use ($pair, $timeframe, $signalType, $setup, $confidence, $reason) {
+            return DB::transaction(function () use ($pair, $timeframe, $best, $confidence, $reason) {
                 $signal = Signal::create([
                     'trading_pair_id'  => $pair->id,
                     'timeframe'        => $timeframe,
-                    'signal_type'      => $signalType,
-                    'entry_price'      => $setup['entry'],
-                    'stop_loss'        => $setup['sl'],
-                    'take_profit'      => $setup['tp'],
+                    'signal_type'      => $best['type'],
+                    'entry_price'      => $best['entry'],
+                    'stop_loss'        => $best['sl'],
+                    'take_profit'      => $best['tp'],
                     'confidence_score' => $confidence,
                     'reason'           => $reason,
-                    'status'           => 'active',
+                    'status'           => 'pending',
                     'expires_at'       => now()->addHours(config('trading.signals.expiry_hours', 24)),
                 ]);
 
                 SendSignalNotification::dispatch($signal)->onQueue('notifications');
 
-                Log::info("OB+FVG signal: {$signalType} {$pair->symbol} {$timeframe}", [
-                    'confidence'     => $confidence,
-                    'entry'          => $setup['entry'],
-                    'sl'             => $setup['sl'],
-                    'tp'             => $setup['tp'],
-                    'fvg_confluence' => $setup['fvg_confluence'] ? 'yes' : 'no',
+                Log::info("OB limit order (pending): {$best['type']} {$pair->symbol} {$timeframe}", [
+                    'entry'    => $best['entry'],
+                    'ob_zone'  => "{$best['ob']['low']}–{$best['ob']['high']}",
+                    'fvg'      => $hasFvg ? 'yes' : 'no',
+                    'confidence' => $confidence,
                 ]);
 
                 return $signal;
             });
 
         } catch (\Exception $e) {
-            Log::error("OB+FVG signal generation failed: {$pair->symbol} {$timeframe}", [
+            Log::error("OB signal generation failed: {$pair->symbol} {$timeframe}", [
                 'error' => $e->getMessage(),
             ]);
             return null;
         }
+    }
+
+    /**
+     * Activate pending OB limit-order signals when price enters the OB zone.
+     *
+     * Called by UpdateSignalResults command. Checks each pending signal and
+     * promotes it to 'active' when:
+     *   BUY : current price <= entry (ob.high) and >= ob.low  (entered demand zone)
+     *   SELL: current price >= entry (ob.low)  and <= ob.high (entered supply zone)
+     *
+     * @return int Number of signals activated
+     */
+    public function activatePendingSignals(): int
+    {
+        $activated = 0;
+
+        $pending = Signal::where('status', 'pending')
+            ->with('tradingPair')
+            ->get();
+
+        foreach ($pending as $signal) {
+            try {
+                // Expire stale pending signals
+                if ($signal->expires_at && $signal->expires_at->isPast()) {
+                    $signal->update(['status' => 'expired', 'closed_at' => now()]);
+                    continue;
+                }
+
+                $currentPrice = $this->marketDataService->getCurrentPrice(
+                    $signal->tradingPair->symbol
+                );
+
+                if ($currentPrice <= 0) {
+                    continue;
+                }
+
+                $entry  = (float) $signal->entry_price;
+                $ob     = $signal->reason['ob_zone'] ?? null;
+                if (! $ob) {
+                    continue;
+                }
+
+                $obHigh = (float) $ob['high'];
+                $obLow  = (float) $ob['low'];
+
+                $triggered = $signal->signal_type === 'BUY'
+                    // Price returned to demand OB from above
+                    ? ($currentPrice <= $entry && $currentPrice >= $obLow)
+                    // Price returned to supply OB from below
+                    : ($currentPrice >= $entry && $currentPrice <= $obHigh);
+
+                if ($triggered) {
+                    $signal->update(['status' => 'active']);
+                    $activated++;
+
+                    Log::info("Pending signal activated: #{$signal->id} {$signal->signal_type} {$signal->tradingPair->symbol}", [
+                        'entry'        => $entry,
+                        'currentPrice' => $currentPrice,
+                    ]);
+                }
+
+            } catch (\Exception $e) {
+                Log::error("Error activating pending signal #{$signal->id}", [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            usleep(100000); // 100ms
+        }
+
+        return $activated;
     }
 
     /**
