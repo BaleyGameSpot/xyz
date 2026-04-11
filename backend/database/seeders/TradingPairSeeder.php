@@ -102,6 +102,17 @@ class TradingPairSeeder extends Seeder
                 'pip_size'       => 0.01,
             ],
 
+            // ---- COMMODITIES ----
+            [
+                'symbol'         => 'XAUUSD',
+                'name'           => 'Gold / US Dollar',
+                'type'           => 'commodity',
+                'exchange'       => 'forex',
+                'package_access' => ['basic', 'best', 'premium'],
+                'is_active'      => true,
+                'pip_size'       => 0.01,
+            ],
+
             // ---- CRYPTO PAIRS ----
             [
                 'symbol'         => 'BTCUSDT',
