@@ -9,7 +9,16 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\SignalController as AdminSignalController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Webhook\TradingViewWebhookController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| TradingView Webhook (no JWT — authenticated by shared secret in payload)
+|--------------------------------------------------------------------------
+*/
+Route::post('/webhook/tradingview', [TradingViewWebhookController::class, 'handle'])
+    ->middleware('throttle:60,1');
 
 /*
 |--------------------------------------------------------------------------

@@ -58,15 +58,19 @@ class SignalAdapter(
             // Signal method chip
             binding.tvSignalMethod.text = signal.signalMethod ?: "BOS/CHoCH"
 
-            // Entry price preview
-            binding.tvEntryPreview.text = "Entry  ${signal.entryPrice}"
+            // Entry price preview — label differs for limit orders vs market
+            val isLimitOrder = signal.signalMethod == "OB Limit Order"
+            binding.tvEntryPreview.text = if (isLimitOrder) "LIMIT @ ${signal.entryPrice}"
+                                          else "Entry  ${signal.entryPrice}"
 
             // Status
             val (statusText, statusColor) = when (signal.status.lowercase()) {
-                "win" -> Pair("WIN", R.color.accent_green)
-                "loss" -> Pair("LOSS", R.color.accent_red)
-                "active" -> Pair("ACTIVE", R.color.accent_blue)
-                else -> Pair("PENDING", R.color.neutral_gray)
+                "win"     -> Pair("WIN",   R.color.accent_green)
+                "loss"    -> Pair("LOSS",  R.color.accent_red)
+                "active"  -> Pair("ACTIVE", R.color.accent_blue)
+                "pending" -> if (isLimitOrder) Pair("LIMIT", R.color.accent_gold)
+                             else Pair("PENDING", R.color.neutral_gray)
+                else      -> Pair("PENDING", R.color.neutral_gray)
             }
             binding.tvStatus.text = statusText
             binding.tvStatus.setTextColor(ContextCompat.getColor(context, statusColor))

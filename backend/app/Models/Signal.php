@@ -123,7 +123,11 @@ class Signal extends Model
     public function getSignalMethodAttribute(): string
     {
         $r = is_array($this->reason) ? $this->reason : [];
-        return ($r['type'] ?? '') === 'OB_FVG_RETEST' ? 'OB+FVG Retest' : 'BOS/CHoCH';
+        return match($r['type'] ?? '') {
+            'OB_FVG_RETEST'  => 'OB+FVG Retest',
+            'OB_LIMIT_ORDER' => 'OB Limit Order',
+            default          => 'BOS/CHoCH',
+        };
     }
 
     public function getPairAttribute(): string

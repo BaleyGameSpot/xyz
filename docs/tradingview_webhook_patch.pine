@@ -1,0 +1,137 @@
+// ============================================================================
+// CHINAR ALLINONE — WEBHOOK PATCH FOR ADVANCE LIMIT ORDER SIGNALS
+// ============================================================================
+//
+// HOW TO APPLY:
+//   1.  Open your "Chinar AllinOne" indicator in the Pine Script Editor.
+//   2.  Add STEP 1 code near the top (after the existing inputs).
+//   3.  Find "method drawVOB" — apply STEP 2 inside that method.
+//   4.  Save & reload the indicator.
+//   5.  In TradingView → Alerts → Create Alert:
+//         Condition  : "Chinar AllinOne" → "Any alert() function call"
+//         Webhook URL: https://YOUR_DOMAIN/api/webhook/tradingview
+//         Message    : (leave empty — Pine Script fills it automatically)
+//   6.  Set TRADINGVIEW_WEBHOOK_SECRET in your Laravel .env to match
+//       the secret string you put in Step 1.
+//
+// SIGNAL FLOW:
+//   OB_FORMED  →  backend creates signal with status="pending"
+//                 App shows  "LIMIT @ 66,544"  badge "LIMIT" (gold)
+//
+//   OB_TOUCH   →  backend creates signal with status="active"
+//                 App shows  "LIMIT @ 66,544"  badge "ACTIVE" (blue)
+//                 (fires when price actually enters the OB zone)
+//
+// ============================================================================
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// STEP 1 — Add this input near the top of the indicator, with the other inputs
+// ────────────────────────────────────────────────────────────────────────────
+
+webhook_secret = input.string(
+     "change_this_secret"
+   , "Webhook Secret"
+   , tooltip = "Must match TRADINGVIEW_WEBHOOK_SECRET in your Laravel .env"
+   , group   = "Webhook"
+   )
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// STEP 2A — Inside method drawVOB(), ADD after the "if use_overlap" block
+//           (i.e. still inside the "if cdn" block, around line 1564)
+//
+// This fires when a NEW Order Block is drawn → ADVANCE / PENDING limit order
+// ────────────────────────────────────────────────────────────────────────────
+
+        // ── ADVANCE LIMIT ORDER WEBHOOK ─────────────────────────────────────
+        if obj.top.size() > 0
+            _obTop  = obj.top.first()
+            _obBtm  = obj.btm.first()
+            _entry  = bull ? _obTop : _obBtm   // BUY entry at top of demand OB
+            _sl     = bull ? _obBtm : _obTop   // BUY stop below bottom of OB
+            alert(
+                 '{"secret":"'    + webhook_secret                              + '"'
+               + ',"event":"OB_FORMED"'
+               + ',"type":"'      + (bull ? "BUY" : "SELL")                    + '"'
+               + ',"symbol":"'    + syminfo.ticker                              + '"'
+               + ',"timeframe":"' + timeframe.period                            + '"'
+               + ',"ob_top":'     + str.tostring(_obTop,  format.mintick)
+               + ',"ob_btm":'     + str.tostring(_obBtm,  format.mintick)
+               + ',"entry":'      + str.tostring(_entry,  format.mintick)
+               + ',"sl":'         + str.tostring(_sl,     format.mintick)
+               + '}'
+               , alert.freq_once_per_bar
+               )
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// STEP 2B — Inside method drawVOB(), REPLACE the existing obtouch block
+//           (around lines 1592–1597, inside the "if barstate.islast" block)
+//
+// Original code to REPLACE:
+//
+//   if bull
+//        ? ta.crossunder(low , obj.top.get(0))
+//        : ta.crossover (high, obj.btm.get(0))
+//       switch bull
+//           true  => blalert.obtouch := true
+//           false => bralert.obtouch := true
+//
+// Replace it with the block below:
+// ────────────────────────────────────────────────────────────────────────────
+
+            if bull
+                 ? ta.crossunder(low , obj.top.get(0))
+                 : ta.crossover (high, obj.btm.get(0))
+
+                _touchTop = obj.top.get(0)
+                _touchBtm = obj.btm.get(0)
+
+                switch bull
+
+                    true  =>
+                        blalert.obtouch := true
+                        // ── OB TOUCH WEBHOOK (BUY) ───────────────────────────
+                        alert(
+                             '{"secret":"'    + webhook_secret                  + '"'
+                           + ',"event":"OB_TOUCH"'
+                           + ',"type":"BUY"'
+                           + ',"symbol":"'    + syminfo.ticker                  + '"'
+                           + ',"timeframe":"' + timeframe.period                + '"'
+                           + ',"ob_top":'     + str.tostring(_touchTop, format.mintick)
+                           + ',"ob_btm":'     + str.tostring(_touchBtm, format.mintick)
+                           + ',"entry":'      + str.tostring(_touchTop, format.mintick)
+                           + ',"sl":'         + str.tostring(_touchBtm, format.mintick)
+                           + '}'
+                           , alert.freq_once_per_bar
+                           )
+
+                    false =>
+                        bralert.obtouch := true
+                        // ── OB TOUCH WEBHOOK (SELL) ──────────────────────────
+                        alert(
+                             '{"secret":"'    + webhook_secret                  + '"'
+                           + ',"event":"OB_TOUCH"'
+                           + ',"type":"SELL"'
+                           + ',"symbol":"'    + syminfo.ticker                  + '"'
+                           + ',"timeframe":"' + timeframe.period                + '"'
+                           + ',"ob_top":'     + str.tostring(_touchTop, format.mintick)
+                           + ',"ob_btm":'     + str.tostring(_touchBtm, format.mintick)
+                           + ',"entry":'      + str.tostring(_touchBtm, format.mintick)
+                           + ',"sl":'         + str.tostring(_touchTop, format.mintick)
+                           + '}'
+                           , alert.freq_once_per_bar
+                           )
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// STEP 3 — Laravel .env — add this line
+// ────────────────────────────────────────────────────────────────────────────
+//
+//   TRADINGVIEW_WEBHOOK_SECRET=change_this_secret
+//
+// (Replace "change_this_secret" with a long random string — same value as
+//  what you put in Step 1 inside Pine Script)
+//
+// ────────────────────────────────────────────────────────────────────────────
