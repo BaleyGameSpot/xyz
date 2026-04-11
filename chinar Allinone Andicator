@@ -99,6 +99,7 @@ fvg_dncss                       = input.color       (color.new(color.red ,  80) 
 fvg_extend                      = input.int         (10                               , "Extend FVG"                  , inline = "2", group = "FAIR VALUE GAP"                  , tooltip = "Extend the display of the FVG.")
 fvg_src                         = input.string      ("Close"                          , "Mitigation  "                , inline = "3", group = "FAIR VALUE GAP"                  , tooltip = "[Close] Use the close of the body as trigger\n\n[Wick] Use the extreme point of the body as trigger", options = ["Close", "Wick"])
 fvg_tf                          = input.timeframe   (""                               , "Timeframe "                  , inline = "4", group = "FAIR VALUE GAP"                  , tooltip = "Timeframe of the fair value gap")
+webhook_secret                  = input.string      ("change_this_secret"              , "Webhook Secret"              , group   = "Webhook"              , tooltip = "Must match TRADINGVIEW_WEBHOOK_SECRET in your Laravel .env")
  
 t                               = color.t           (ob_bull_css)
 invcol                          = color.new         (color.white                    , 100)
@@ -1562,6 +1563,28 @@ method drawVOB(bool cdn, bool bull, color css, int loc, bool swing) =>
                     obj.blVP .remove(rmP)
                     obj.brVP .remove(rmP)
  
+        // ── ADVANCE LIMIT ORDER ALERT ─────────────────────────────────────────────────────────────────────────────────────
+        // Fires when a new OB is drawn → creates a PENDING limit order in the app
+        if obj.top.size() > 0
+            _obTop = obj.top.first()
+            _obBtm = obj.btm.first()
+            _entry = bull ? _obTop : _obBtm
+            _sl    = bull ? _obBtm : _obTop
+            alert(
+                 '{"secret":"'    + webhook_secret                    + '"'
+               + ',"event":"OB_FORMED"'
+               + ',"type":"'      + (bull ? "BUY" : "SELL")          + '"'
+               + ',"symbol":"'    + syminfo.ticker                    + '"'
+               + ',"timeframe":"' + timeframe.period                  + '"'
+               + ',"ob_top":'     + str.tostring(_obTop, format.mintick)
+               + ',"ob_btm":'     + str.tostring(_obBtm, format.mintick)
+               + ',"entry":'      + str.tostring(_entry, format.mintick)
+               + ',"sl":'         + str.tostring(_sl,    format.mintick)
+               + '}'
+               , alert.freq_once_per_bar
+               )
+ 
+ 
     if barstate.isconfirmed
  
         for x = 0 to ob_num - 1
@@ -1589,13 +1612,48 @@ method drawVOB(bool cdn, bool bull, color css, int loc, bool swing) =>
  
             // Alert
  
-            if bull 
-                 ? ta.crossunder(low , obj.top.get(0)) 
-                 : ta.crossover (high, obj.btm.get(0)) 
-                switch bull 
-                    true  => blalert.obtouch := true 
-                    false => bralert.obtouch := true
+            if bull
+                 ? ta.crossunder(low , obj.top.get(0))
+                 : ta.crossover (high, obj.btm.get(0))
  
+                _touchTop = obj.top.get(0)
+                _touchBtm = obj.btm.get(0)
+ 
+                switch bull
+ 
+                    true  =>
+                        blalert.obtouch := true
+                        // ── OB TOUCH WEBHOOK (BUY) ────────────────────────────────────────────────────────
+                        alert(
+                             '{"secret":"'    + webhook_secret                  + '"'
+                           + ',"event":"OB_TOUCH"'
+                           + ',"type":"BUY"'
+                           + ',"symbol":"'    + syminfo.ticker                  + '"'
+                           + ',"timeframe":"' + timeframe.period                + '"'
+                           + ',"ob_top":'     + str.tostring(_touchTop, format.mintick)
+                           + ',"ob_btm":'     + str.tostring(_touchBtm, format.mintick)
+                           + ',"entry":'      + str.tostring(_touchTop, format.mintick)
+                           + ',"sl":'         + str.tostring(_touchBtm, format.mintick)
+                           + '}'
+                           , alert.freq_once_per_bar
+                           )
+ 
+                    false =>
+                        bralert.obtouch := true
+                        // ── OB TOUCH WEBHOOK (SELL) ──────────────────────────────────────────────────────
+                        alert(
+                             '{"secret":"'    + webhook_secret                  + '"'
+                           + ',"event":"OB_TOUCH"'
+                           + ',"type":"SELL"'
+                           + ',"symbol":"'    + syminfo.ticker                  + '"'
+                           + ',"timeframe":"' + timeframe.period                + '"'
+                           + ',"ob_top":'     + str.tostring(_touchTop, format.mintick)
+                           + ',"ob_btm":'     + str.tostring(_touchBtm, format.mintick)
+                           + ',"entry":'      + str.tostring(_touchBtm, format.mintick)
+                           + ',"sl":'         + str.tostring(_touchTop, format.mintick)
+                           + '}'
+                           , alert.freq_once_per_bar
+                           )
  
             float tV = 0
             obj.dV.clear()
