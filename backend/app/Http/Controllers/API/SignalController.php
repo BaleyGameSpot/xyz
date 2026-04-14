@@ -149,44 +149,23 @@ class SignalController extends Controller
         }
 
         try {
-            // Run both analysis methods; return whichever fired (BOS/CHoCH takes priority)
-            $signal      = $this->signalService->generateSignal($pair, $request->timeframe);
-            $obFvgSignal = $this->signalService->generateOBFVGSignal($pair, $request->timeframe);
+            $signal = $this->signalService->generateSignal($pair, $request->timeframe);
 
-            $result = $signal ?? $obFvgSignal;
-
-            if ($result) {
-                $result->load('tradingPair');
-                $method = $signal ? 'BOS/CHoCH' : 'OB+FVG Retest';
-
+            if (! $signal) {
                 return response()->json([
                     'success' => true,
-                    'message' => "{$result->signal_type} signal generated via {$method}",
-                    'data'    => $result,
-                ], 201);
-            }
-
-            // No new signal generated — return the most recent existing pending/active signal
-            $existing = Signal::with('tradingPair')
-                ->where('trading_pair_id', $pair->id)
-                ->where('timeframe', $request->timeframe)
-                ->whereIn('status', ['pending', 'active'])
-                ->latest()
-                ->first();
-
-            if ($existing) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'No new signal generated. Returning existing active signal for this pair.',
-                    'data'    => $existing,
+                    'message' => 'Analysis complete. No signal conditions met at this time.',
+                    'data'    => null,
                 ]);
             }
 
+            $signal->load('tradingPair');
+
             return response()->json([
                 'success' => true,
-                'message' => 'Analysis complete. No signal conditions met at this time.',
-                'data'    => null,
-            ]);
+                'message' => "Signal generated: {$signal->signal_type}",
+                'data'    => $signal,
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

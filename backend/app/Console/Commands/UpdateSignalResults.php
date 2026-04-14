@@ -17,13 +17,6 @@ class UpdateSignalResults extends Command
     {
         $this->info('Updating signal results...');
 
-        // ── Step 1: activate pending OB limit orders when price enters zone ──
-        $activated = $signalService->activatePendingSignals();
-        if ($activated > 0) {
-            $this->info("Activated {$activated} pending signal(s).");
-        }
-
-        // ── Step 2: check active signals for win / loss / expired ─────────────
         $query = Signal::where('status', 'active')->with('tradingPair');
 
         if ($signalId = $this->option('signal-id')) {

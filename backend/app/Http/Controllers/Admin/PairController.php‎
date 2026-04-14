@@ -1,0 +1,112 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Package;
+use App\Models\TradingPair;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
+class PairController extends Controller
+{
+    /**
+     * List all trading pairs.
+     * GET /admin/pairs
+     */
+    public function index(Request $request): \Illuminate\View\View
+    {
+        $pairs    = TradingPair::withCount('signals')->orderBy('type')->orderBy('symbol')->get();
+        $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
+
+        return view('admin.pairs.index', compact('pairs', 'packages'));
+    }
+
+    /**
+     * Create a new trading pair.
+     * POST /admin/pairs
+     */
+    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'symbol'         => ['required', 'string', 'max:20', 'unique:trading_pairs,symbol'],
+            'name'           => ['required', 'string', 'max:100'],
+            'type'           => ['required', Rule::in(['crypto', 'forex'])],
+            'exchange'       => ['required', Rule::in(['binance', 'forex', 'other'])],
+            'pip_size'       => ['required', 'numeric', 'min:0.000001'],
+            'package_access' => ['required', 'array', 'min:1'],
+            'package_access.*' => ['string', Rule::exists('packages', 'slug')],
+            'is_active'      => ['boolean'],
+        ]);
+
+        $validated['symbol']    = strtoupper($validated['symbol']);
+        $validated['is_active'] = $request->boolean('is_active', true);
+
+        TradingPair::create($validated);
+
+        return redirect()->route('admin.pairs.index')
+            ->with('success', "Trading pair {$validated['symbol']} added successfully.");
+    }
+
+    /**
+     * Update a trading pair.
+     * PUT /admin/pairs/{pair}
+     */
+    public function update(Request $request, TradingPair $pair): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'symbol'         => ['required', 'string', 'max:20', Rule::unique('trading_pairs', 'symbol')->ignore($pair->id)],
+            'name'           => ['required', 'string', 'max:100'],
+            'type'           => ['required', Rule::in(['crypto', 'forex'])],
+            'exchange'       => ['required', Rule::in(['binance', 'forex', 'other'])],
+            'pip_size'       => ['required', 'numeric', 'min:0.000001'],
+            'package_access' => ['required', 'array', 'min:1'],
+            'package_access.*' => ['string', Rule::exists('packages', 'slug')],
+            'is_active'      => ['boolean'],
+        ]);
+
+        $validated['symbol']    = strtoupper($validated['symbol']);
+        $validated['is_active'] = $request->boolean('is_active');
+
+        $pair->update($validated);
+
+        return redirect()->route('admin.pairs.index')
+            ->with('success', "Pair {$pair->symbol} updated successfully.");
+    }
+
+    /**
+     * Toggle active status.
+     * PATCH /admin/pairs/{pair}/toggle
+     */
+    public function toggle(Request $request, TradingPair $pair): \Illuminate\Http\RedirectResponse
+    {
+        $newStatus = ! $pair->is_active;
+        $pair->update(['is_active' => $newStatus]);
+
+        $label = $newStatus ? 'activated' : 'deactivated';
+
+        return back()->with('success', "{$pair->symbol} has been {$label}.");
+    }
+
+    /**
+     * Delete a trading pair.
+     * DELETE /admin/pairs/{pair}
+     */
+    public function destroy(TradingPair $pair): \Illuminate\Http\RedirectResponse
+    {
+        $signalCount = $pair->signals()->count();
+
+        if ($signalCount > 0) {
+            return back()->with('error',
+                "Cannot delete {$pair->symbol} — it has {$signalCount} signal(s) linked to it. Deactivate it instead."
+            );
+        }
+
+        $symbol = $pair->symbol;
+        $pair->delete();
+
+        return redirect()->route('admin.pairs.index')
+            ->with('success', "Pair {$symbol} deleted successfully.");
+    }
+}

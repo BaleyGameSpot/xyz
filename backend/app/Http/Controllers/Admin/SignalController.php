@@ -122,27 +122,19 @@ class SignalController extends Controller
     public function mark(Request $request, Signal $signal): JsonResponse|\Illuminate\Http\RedirectResponse
     {
         $request->validate([
-            'status'            => ['required', 'in:win,loss,expired,pending'],
+            'status'            => ['required', 'in:win,loss,expired'],
             'close_price'       => ['sometimes', 'numeric', 'min:0'],
             'result_percentage' => ['sometimes', 'numeric'],
         ]);
 
-        // Resetting to pending clears close data
-        if ($request->status === 'pending') {
-            $signal->update([
-                'status'            => 'pending',
-                'closed_at'         => null,
-                'close_price'       => null,
-                'result_percentage' => null,
-            ]);
-            if (! $request->expectsJson() && ! $request->is('api/*')) {
-                return back()->with('success', "Signal #{$signal->id} reset to pending.");
+        if (! in_array($signal->status, ['active', 'pending'])) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only active or pending signals can be marked.',
+                ], 422);
             }
-            return response()->json([
-                'success' => true,
-                'message' => "Signal #{$signal->id} reset to pending.",
-                'data'    => $signal->fresh('tradingPair'),
-            ]);
+            return back()->with('error', 'Only active or pending signals can be marked.');
         }
 
         $updates = [
@@ -272,7 +264,7 @@ class SignalController extends Controller
     public function bulk(Request $request): \Illuminate\Http\RedirectResponse
     {
         $request->validate([
-            'action'     => ['required', 'in:delete,expire,win,loss,pending'],
+            'action'     => ['required', 'in:delete,expire'],
             'signal_ids' => ['required', 'array', 'min:1'],
             'signal_ids.*' => ['integer'],
         ]);
@@ -281,11 +273,11 @@ class SignalController extends Controller
         $count   = $signals->count();
 
         match($request->action) {
-            'delete'  => $signals->delete(),
-            'expire'  => $signals->update(['status' => 'expired', 'closed_at' => now()]),
-            'win'     => $signals->update(['status' => 'win',     'closed_at' => now()]),
-            'loss'    => $signals->update(['status' => 'loss',    'closed_at' => now()]),
-            'pending' => $signals->update(['status' => 'pending', 'closed_at' => null, 'close_price' => null, 'result_percentage' => null]),
+            'delete' => $signals->delete(),
+            'expire' => $signals->where('status', 'active')->update([
+                'status'    => 'expired',
+                'closed_at' => now(),
+            ]),
         };
 
         return back()->with('success', "Bulk action '{$request->action}' applied to {$count} signal(s).");
