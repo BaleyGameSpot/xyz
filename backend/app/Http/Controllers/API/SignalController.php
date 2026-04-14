@@ -155,23 +155,38 @@ class SignalController extends Controller
 
             $result = $signal ?? $obFvgSignal;
 
-            if (! $result) {
+            if ($result) {
+                $result->load('tradingPair');
+                $method = $signal ? 'BOS/CHoCH' : 'OB+FVG Retest';
+
                 return response()->json([
                     'success' => true,
-                    'message' => 'Analysis complete. No signal conditions met at this time.',
-                    'data'    => null,
+                    'message' => "{$result->signal_type} signal generated via {$method}",
+                    'data'    => $result,
+                ], 201);
+            }
+
+            // No new signal generated — return the most recent existing pending/active signal
+            $existing = Signal::with('tradingPair')
+                ->where('trading_pair_id', $pair->id)
+                ->where('timeframe', $request->timeframe)
+                ->whereIn('status', ['pending', 'active'])
+                ->latest()
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No new signal generated. Returning existing active signal for this pair.',
+                    'data'    => $existing,
                 ]);
             }
 
-            $result->load('tradingPair');
-
-            $method = $signal ? 'BOS/CHoCH' : 'OB+FVG Retest';
-
             return response()->json([
                 'success' => true,
-                'message' => "{$result->signal_type} signal generated via {$method}",
-                'data'    => $result,
-            ], 201);
+                'message' => 'Analysis complete. No signal conditions met at this time.',
+                'data'    => null,
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

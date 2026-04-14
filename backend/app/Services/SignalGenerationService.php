@@ -365,6 +365,7 @@ class SignalGenerationService
             );
 
             if (count($ohlcv) < 60) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: insufficient candles", ['count' => count($ohlcv)]);
                 return null;
             }
 
@@ -377,6 +378,14 @@ class SignalGenerationService
             $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
             $h1Trend  = $mtfTrend['1h'] ?? 'neutral';
 
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: starting detection", [
+                'candles'      => $count,
+                'currentClose' => $currentClose,
+                'h1Trend'      => $h1Trend,
+                'mtfTrend'     => $mtfTrend,
+                'atr'          => $atr,
+            ]);
+
             // ── Detect valid BOS/CHoCH-linked OBs ────────────────────────────
             $bullishOBs = ($h1Trend !== 'bearish')
                 ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bullish')
@@ -384,6 +393,15 @@ class SignalGenerationService
             $bearishOBs = ($h1Trend !== 'bullish')
                 ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bearish')
                 : [];
+
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: OB detection result", [
+                'bullishOBs' => count($bullishOBs),
+                'bearishOBs' => count($bearishOBs),
+                'bullish_skipped' => $h1Trend === 'bearish' ? 'yes (h1 bearish)' : 'no',
+                'bearish_skipped' => $h1Trend === 'bullish' ? 'yes (h1 bullish)' : 'no',
+                'first_bullish_ob' => $bullishOBs[0] ?? null,
+                'first_bearish_ob' => $bearishOBs[0] ?? null,
+            ]);
 
             // ── Build candidate limit-order setups ────────────────────────────
             $candidates = [];
@@ -423,8 +441,18 @@ class SignalGenerationService
             }
 
             if (empty($candidates)) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: no valid candidates built from OBs");
                 return null;
             }
+
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: candidates built", [
+                'count'      => count($candidates),
+                'candidates' => array_map(fn($c) => [
+                    'type'      => $c['type'],
+                    'entry'     => $c['entry'],
+                    'proximity' => $c['proximity'],
+                ], $candidates),
+            ]);
 
             // Pick the OB closest to current price
             usort($candidates, fn($a, $b) => $a['proximity'] <=> $b['proximity']);
@@ -440,6 +468,11 @@ class SignalGenerationService
                 ->exists();
 
             if ($existing) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: duplicate guard blocked signal", [
+                    'type'  => $best['type'],
+                    'entry' => $best['entry'],
+                    'tol'   => $tol,
+                ]);
                 return null;
             }
 
@@ -474,7 +507,17 @@ class SignalGenerationService
             }
             $confidence = min(100, $confidence);
 
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: confidence scored", [
+                'type'       => $best['type'],
+                'confidence' => $confidence,
+                'emaTrend'   => $emaTrend,
+                'signalDir'  => $signalDir,
+                'hasFvg'     => $hasFvg,
+                'minRequired'=> config('trading.signals.min_confidence', 40),
+            ]);
+
             if ($confidence < config('trading.signals.min_confidence', 40)) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: rejected — confidence {$confidence} below minimum");
                 return null;
             }
 

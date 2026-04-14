@@ -235,14 +235,17 @@ class IndicatorService
                 // OB dimensions — Precise mode: top = hl2 of OB candle, bottom = lowest low
                 $obTop = ((float) $highs[$obIdx] + (float) $lows[$obIdx]) / 2.0;
                 $obBot = $lowestLow;
+                $obMid = ($obTop + $obBot) / 2.0;
 
                 // OB must be below current price (it's a demand zone below market)
                 if ($obTop >= $currentClose) continue;
 
-                // Mitigation: invalidated if any close after breakout went below obBot
+                // Mitigation (Middle mode): invalidated only if a close goes below the OB midpoint.
+                // More lenient than Absolute (close < obBot) — allows wicks through the bottom
+                // without fully invalidating the zone, matching Pine Script's "Middle" mode.
                 $mitigated = false;
                 for ($i = $breakoutIdx + 1; $i < $count; $i++) {
-                    if ((float) $closes[$i] < $obBot) { $mitigated = true; break; }
+                    if ((float) $closes[$i] < $obMid) { $mitigated = true; break; }
                 }
                 if ($mitigated) continue;
 
@@ -283,14 +286,15 @@ class IndicatorService
                 // OB dimensions — top = highest high, bottom = hl2 of OB candle
                 $obTop = $highestHigh;
                 $obBot = ((float) $highs[$obIdx] + (float) $lows[$obIdx]) / 2.0;
+                $obMid = ($obTop + $obBot) / 2.0;
 
                 // OB must be above current price (it's a supply zone above market)
                 if ($obBot <= $currentClose) continue;
 
-                // Mitigation: invalidated if any close after breakout went above obTop
+                // Mitigation (Middle mode): invalidated only if a close goes above the OB midpoint.
                 $mitigated = false;
                 for ($i = $breakoutIdx + 1; $i < $count; $i++) {
-                    if ((float) $closes[$i] > $obTop) { $mitigated = true; break; }
+                    if ((float) $closes[$i] > $obMid) { $mitigated = true; break; }
                 }
                 if ($mitigated) continue;
 
