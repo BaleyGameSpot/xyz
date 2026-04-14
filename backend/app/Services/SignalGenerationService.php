@@ -340,6 +340,380 @@ class SignalGenerationService
     }
 
     /**
+     * Generate an advance OB limit order signal — no TradingView required.
+     *
+     * Detects valid BOS/CHoCH-linked Order Blocks from live Binance data and
+     * creates a PENDING signal at the OB zone level. Price does NOT need to
+     * be touching the OB yet — the signal is an advance limit order.
+     *
+     * Status lifecycle:
+     *   pending  → price has not yet returned to OB zone (limit order waiting)
+     *   active   → price entered the OB zone (activatePendingSignals() promotes it)
+     *   win/loss → SL or TP hit (updateSignalResult() handles)
+     *
+     * @param  TradingPair $pair
+     * @param  string      $timeframe
+     * @return Signal|null
+     */
+    public function generateOBFVGSignal(TradingPair $pair, string $timeframe): ?Signal
+    {
+        try {
+            $ohlcv = $this->marketDataService->getOHLCV(
+                $pair->symbol,
+                $timeframe,
+                config('trading.indicators.candle_limit', 200)
+            );
+
+            if (count($ohlcv) < 60) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: insufficient candles", ['count' => count($ohlcv)]);
+                return null;
+            }
+
+            $count        = count($ohlcv);
+            $currentClose = (float) $ohlcv[$count - 1]['close'];
+            $atr          = $this->indicatorService->calculateATR($ohlcv, config('trading.indicators.atr_length', 14));
+            $rrRatio      = config('trading.signals.risk_reward_ratio', 2.0);
+
+            // ── MTF trend for direction filtering ────────────────────────────
+            $mtfTrend = $this->getMTFTrend($pair->symbol, $timeframe);
+            $h1Trend  = $mtfTrend['1h'] ?? 'neutral';
+
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: starting detection", [
+                'candles'      => $count,
+                'currentClose' => $currentClose,
+                'h1Trend'      => $h1Trend,
+                'mtfTrend'     => $mtfTrend,
+                'atr'          => $atr,
+            ]);
+
+            // ── Detect valid BOS/CHoCH-linked OBs ────────────────────────────
+            $bullishOBs = ($h1Trend !== 'bearish')
+                ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bullish')
+                : [];
+            $bearishOBs = ($h1Trend !== 'bullish')
+                ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bearish')
+                : [];
+
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: OB detection result", [
+                'bullishOBs' => count($bullishOBs),
+                'bearishOBs' => count($bearishOBs),
+                'bullish_skipped' => $h1Trend === 'bearish' ? 'yes (h1 bearish)' : 'no',
+                'bearish_skipped' => $h1Trend === 'bullish' ? 'yes (h1 bullish)' : 'no',
+                'first_bullish_ob' => $bullishOBs[0] ?? null,
+                'first_bearish_ob' => $bearishOBs[0] ?? null,
+            ]);
+
+            // ── Detect FVGs (needed for both candidates + confluence) ─────────
+            $fvgs = $this->indicatorService->detectFVG($ohlcv);
+
+            // ── Build candidate limit-order setups ────────────────────────────
+            // Zones are ranked by proximity to current price; the nearest one wins.
+            // Each candidate carries zone_type so the app can display it clearly.
+            $candidates = [];
+
+            // BUY — Volumetric Order Block (demand zone below price)
+            foreach ($bullishOBs as $ob) {
+                $entry = $ob['high'];
+                if ($entry >= $currentClose) continue; // zone must be below current price
+                $sl   = $ob['low'] - ($atr * 0.3);
+                $risk = $entry - $sl;
+                if ($risk <= 0) continue;
+                $candidates[] = [
+                    'type'      => 'BUY',
+                    'zone_type' => 'Volumetric Order Block',
+                    'ob'        => $ob,
+                    'entry'     => round($entry, 8),
+                    'sl'        => round($sl, 8),
+                    'tp'        => round($entry + ($risk * $rrRatio), 8),
+                    'dir'       => 'bullish',
+                    'proximity' => abs($entry - $currentClose),
+                ];
+                break; // only most-recent bullish OB
+            }
+
+            // SELL — Volumetric Order Block (supply zone above price)
+            foreach ($bearishOBs as $ob) {
+                $entry = $ob['low'];
+                if ($entry <= $currentClose) continue; // zone must be above current price
+                $sl   = $ob['high'] + ($atr * 0.3);
+                $risk = $sl - $entry;
+                if ($risk <= 0) continue;
+                $candidates[] = [
+                    'type'      => 'SELL',
+                    'zone_type' => 'Volumetric Order Block',
+                    'ob'        => $ob,
+                    'entry'     => round($entry, 8),
+                    'sl'        => round($sl, 8),
+                    'tp'        => round($entry - ($risk * $rrRatio), 8),
+                    'dir'       => 'bearish',
+                    'proximity' => abs($entry - $currentClose),
+                ];
+                break; // only most-recent bearish OB
+            }
+
+            // BUY — Fair Value Gap (support gap below price, stored in 'bearish' bucket)
+            // Zone: top = c0.low, bottom = c2.high. Enter at top (upper edge of support).
+            foreach ($fvgs['bearish'] ?? [] as $fvg) {
+                if ($fvg['filled']) continue;
+                $entry = $fvg['top'];
+                if ($entry >= $currentClose) continue; // zone top must be below current price
+                $sl   = $fvg['bottom'] - ($atr * 0.3);
+                $risk = $entry - $sl;
+                if ($risk <= 0) continue;
+                $candidates[] = [
+                    'type'      => 'BUY',
+                    'zone_type' => 'Fair Value Gap',
+                    'ob'        => ['high' => $fvg['top'], 'low' => $fvg['bottom']],
+                    'entry'     => round($entry, 8),
+                    'sl'        => round($sl, 8),
+                    'tp'        => round($entry + ($risk * $rrRatio), 8),
+                    'dir'       => 'bullish',
+                    'proximity' => abs($entry - $currentClose),
+                ];
+                break; // only most-recent unfilled support FVG
+            }
+
+            // SELL — Fair Value Gap (resistance gap above price, stored in 'bullish' bucket)
+            // Zone: top = c2.low, bottom = c0.high. Enter at bottom (lower edge of resistance).
+            foreach ($fvgs['bullish'] ?? [] as $fvg) {
+                if ($fvg['filled']) continue;
+                $entry = $fvg['bottom'];
+                if ($entry <= $currentClose) continue; // zone bottom must be above current price
+                $sl   = $fvg['top'] + ($atr * 0.3);
+                $risk = $sl - $entry;
+                if ($risk <= 0) continue;
+                $candidates[] = [
+                    'type'      => 'SELL',
+                    'zone_type' => 'Fair Value Gap',
+                    'ob'        => ['high' => $fvg['top'], 'low' => $fvg['bottom']],
+                    'entry'     => round($entry, 8),
+                    'sl'        => round($sl, 8),
+                    'tp'        => round($entry - ($risk * $rrRatio), 8),
+                    'dir'       => 'bearish',
+                    'proximity' => abs($entry - $currentClose),
+                ];
+                break; // only most-recent unfilled resistance FVG
+            }
+
+            if (empty($candidates)) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: no valid candidates (OBs or FVGs)");
+                return null;
+            }
+
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: candidates built", [
+                'count'      => count($candidates),
+                'candidates' => array_map(fn($c) => [
+                    'type'      => $c['type'],
+                    'entry'     => $c['entry'],
+                    'proximity' => $c['proximity'],
+                ], $candidates),
+            ]);
+
+            // Pick the OB closest to current price
+            usort($candidates, fn($a, $b) => $a['proximity'] <=> $b['proximity']);
+            $best = $candidates[0];
+
+            // ── Duplicate guard: skip if pending/active signal already at this OB ─
+            $tol      = $best['entry'] * 0.002; // 0.2% tolerance
+            $existing = Signal::where('trading_pair_id', $pair->id)
+                ->where('timeframe', $timeframe)
+                ->where('signal_type', $best['type'])
+                ->whereIn('status', ['pending', 'active'])
+                ->whereBetween('entry_price', [$best['entry'] - $tol, $best['entry'] + $tol])
+                ->exists();
+
+            if ($existing) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: duplicate guard blocked signal", [
+                    'type'  => $best['type'],
+                    'entry' => $best['entry'],
+                    'tol'   => $tol,
+                ]);
+                return null;
+            }
+
+            // ── Confidence scoring ────────────────────────────────────────────
+            $closes    = array_map(fn($c) => (float) $c['close'], $ohlcv);
+            $emaLength = config('trading.indicators.ema_length', 34);
+            $smma      = $this->indicatorService->calculateSMMA($closes, $emaLength);
+            $zlema     = $this->indicatorService->calculateZLEMA($closes, $emaLength);
+            $smmaLast  = $smma[$count - 1] ?? 0;
+            $zlemaLast = $zlema[$count - 1] ?? 0;
+
+            $emaTrend = 'neutral';
+            if ($currentClose > $smmaLast && $zlemaLast > $smmaLast) $emaTrend = 'bullish';
+            elseif ($currentClose < $smmaLast && $zlemaLast < $smmaLast) $emaTrend = 'bearish';
+
+            $signalDir  = $best['dir'];
+            $confidence = 60;
+            if (($mtfTrend['1h'] ?? null) === $signalDir) $confidence += 15;
+            if (($mtfTrend['4h'] ?? null) === $signalDir) $confidence += 10;
+            if ($emaTrend === $signalDir)                  $confidence += 10;
+
+            // FVG confluence: if the winning zone is an OB, check if an FVG overlaps it
+            // (adds +5 confidence). FVG-only signals already carry their own zone_type.
+            $fvgKey = $best['type'] === 'BUY' ? 'bearish' : 'bullish';
+            $hasFvg = $best['zone_type'] === 'Fair Value Gap'; // already a FVG signal
+            if (! $hasFvg) {
+                foreach ($fvgs[$fvgKey] ?? [] as $fvg) {
+                    if (! $fvg['filled']
+                        && $fvg['bottom'] <= $best['ob']['high']
+                        && $fvg['top']    >= $best['ob']['low']
+                    ) {
+                        $hasFvg = true;
+                        $confidence += 5;
+                        break;
+                    }
+                }
+            }
+            $confidence = min(100, $confidence);
+
+            Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: confidence scored", [
+                'type'       => $best['type'],
+                'confidence' => $confidence,
+                'emaTrend'   => $emaTrend,
+                'signalDir'  => $signalDir,
+                'hasFvg'     => $hasFvg,
+                'minRequired'=> config('trading.signals.min_confidence', 40),
+            ]);
+
+            if ($confidence < config('trading.signals.min_confidence', 40)) {
+                Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: rejected — confidence {$confidence} below minimum");
+                return null;
+            }
+
+            // ── Build reason JSON ─────────────────────────────────────────────
+            $zoneType  = $best['zone_type']; // 'Volumetric Order Block' | 'Fair Value Gap'
+            $direction = $best['type'] === 'BUY' ? 'Bullish' : 'Bearish';
+            $reason    = [
+                'type'             => 'OB_FVG_RETEST',
+                'zone_type'        => $zoneType,
+                'ob_zone'          => ['high' => $best['ob']['high'], 'low' => $best['ob']['low']],
+                'fvg_confluence'   => $hasFvg,
+                'ema_trend'        => $emaTrend,
+                'mtf_trend_data'   => $mtfTrend,
+                'market_structure' => "{$direction} {$zoneType} – Limit Order"
+                                      . ($hasFvg && $zoneType !== 'Fair Value Gap' ? ' + FVG' : ''),
+                'order_block'      => sprintf(
+                    '%s %s: %.6f – %.6f',
+                    $direction, $zoneType, $best['ob']['low'], $best['ob']['high']
+                ),
+                'fvg'              => $hasFvg ? 'FVG confluence present' : null,
+                'mtf_trend'        => isset($mtfTrend['1h'], $mtfTrend['4h'])
+                                      ? "1h: {$mtfTrend['1h']}, 4h: {$mtfTrend['4h']}"
+                                      : 'MTF data unavailable',
+                'summary'          => sprintf(
+                    '%s Limit at %.6f. Zone Type: %s (%.6f – %.6f). Waiting for price to return to zone.',
+                    $best['type'], $best['entry'], $zoneType,
+                    $best['ob']['low'], $best['ob']['high']
+                ),
+            ];
+
+            return DB::transaction(function () use ($pair, $timeframe, $best, $confidence, $reason) {
+                $signal = Signal::create([
+                    'trading_pair_id'  => $pair->id,
+                    'timeframe'        => $timeframe,
+                    'signal_type'      => $best['type'],
+                    'entry_price'      => $best['entry'],
+                    'stop_loss'        => $best['sl'],
+                    'take_profit'      => $best['tp'],
+                    'confidence_score' => $confidence,
+                    'reason'           => $reason,
+                    'status'           => 'pending',
+                    'expires_at'       => now()->addHours(config('trading.signals.expiry_hours', 24)),
+                ]);
+
+                SendSignalNotification::dispatch($signal)->onQueue('notifications');
+
+                Log::info("OB limit order (pending): {$best['type']} {$pair->symbol} {$timeframe}", [
+                    'entry'    => $best['entry'],
+                    'ob_zone'  => "{$best['ob']['low']}–{$best['ob']['high']}",
+                    'fvg'      => $hasFvg ? 'yes' : 'no',
+                    'confidence' => $confidence,
+                ]);
+
+                return $signal;
+            });
+
+        } catch (\Exception $e) {
+            Log::error("OB signal generation failed: {$pair->symbol} {$timeframe}", [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Activate pending OB limit-order signals when price enters the OB zone.
+     *
+     * Called by UpdateSignalResults command. Checks each pending signal and
+     * promotes it to 'active' when:
+     *   BUY : current price <= entry (ob.high) and >= ob.low  (entered demand zone)
+     *   SELL: current price >= entry (ob.low)  and <= ob.high (entered supply zone)
+     *
+     * @return int Number of signals activated
+     */
+    public function activatePendingSignals(): int
+    {
+        $activated = 0;
+
+        $pending = Signal::where('status', 'pending')
+            ->with('tradingPair')
+            ->get();
+
+        foreach ($pending as $signal) {
+            try {
+                // Expire stale pending signals
+                if ($signal->expires_at && $signal->expires_at->isPast()) {
+                    $signal->update(['status' => 'expired', 'closed_at' => now()]);
+                    continue;
+                }
+
+                $currentPrice = $this->marketDataService->getCurrentPrice(
+                    $signal->tradingPair->symbol
+                );
+
+                if ($currentPrice <= 0) {
+                    continue;
+                }
+
+                $entry  = (float) $signal->entry_price;
+                $ob     = $signal->reason['ob_zone'] ?? null;
+                if (! $ob) {
+                    continue;
+                }
+
+                $obHigh = (float) $ob['high'];
+                $obLow  = (float) $ob['low'];
+
+                $triggered = $signal->signal_type === 'BUY'
+                    // Price returned to demand OB from above
+                    ? ($currentPrice <= $entry && $currentPrice >= $obLow)
+                    // Price returned to supply OB from below
+                    : ($currentPrice >= $entry && $currentPrice <= $obHigh);
+
+                if ($triggered) {
+                    $signal->update(['status' => 'active']);
+                    $activated++;
+
+                    Log::info("Pending signal activated: #{$signal->id} {$signal->signal_type} {$signal->tradingPair->symbol}", [
+                        'entry'        => $entry,
+                        'currentPrice' => $currentPrice,
+                    ]);
+                }
+
+            } catch (\Exception $e) {
+                Log::error("Error activating pending signal #{$signal->id}", [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            usleep(100000); // 100ms
+        }
+
+        return $activated;
+    }
+
+    /**
      * Update signal result based on current price.
      * Called by the UpdateSignalResults command.
      *

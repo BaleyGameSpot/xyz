@@ -55,12 +55,14 @@ class GenerateSignals extends Command
                 $this->line("Analyzing {$pair->symbol} / {$timeframe}...");
 
                 try {
-                    $signal = $signalService->generateSignal($pair, $timeframe);
-                    if ($signal) {
+                    // Nearest Volumetric OB or FVG → pending limit order
+                    $obFvgSignal = $signalService->generateOBFVGSignal($pair, $timeframe);
+                    if ($obFvgSignal) {
                         $generated++;
-                        $this->info("  ✓ {$signal->signal_type} signal generated (confidence: {$signal->confidence_score}%)");
+                        $zoneType = $obFvgSignal->reason['zone_type'] ?? 'Zone';
+                        $this->info("  ✓ [{$zoneType}] {$obFvgSignal->signal_type} Limit @ {$obFvgSignal->entry_price} (confidence: {$obFvgSignal->confidence_score}%)");
                     } else {
-                        $this->line("  → No signal conditions met");
+                        $this->line("  → No valid zone found");
                     }
                 } catch (\Exception $e) {
                     $failed++;

@@ -113,9 +113,31 @@ class Signal extends Model
         return abs((float) $this->entry_price - (float) $this->stop_loss);
     }
 
-    protected $appends = ['pair', 'reason_summary'];
+    protected $appends = ['pair', 'reason_summary', 'signal_method'];
 
     // Blade-friendly accessors
+
+    /**
+     * Returns the zone type that generated this signal.
+     * Used by the mobile app for the badge/label on each signal card.
+     */
+    public function getSignalMethodAttribute(): string
+    {
+        $r = is_array($this->reason) ? $this->reason : [];
+
+        // New format: zone_type is stored explicitly
+        if (isset($r['zone_type'])) {
+            return $r['zone_type']; // 'Volumetric Order Block' | 'Fair Value Gap'
+        }
+
+        // Legacy formats
+        return match($r['type'] ?? '') {
+            'OB_FVG_RETEST'  => 'Volumetric Order Block',
+            'OB_LIMIT_ORDER' => 'Volumetric Order Block',
+            default          => 'BOS/CHoCH',
+        };
+    }
+
     public function getPairAttribute(): string
     {
         return $this->tradingPair->symbol ?? '';

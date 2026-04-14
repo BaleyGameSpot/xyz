@@ -248,6 +248,23 @@ class IndicatorService
      * @param  array $ohlcv Array of OHLCV candles
      * @return array        ['bullish' => [...zones], 'bearish' => [...zones]]
      */
+    /**
+     * Detect Fair Value Gaps (FVG) and whether each has been filled.
+     *
+     * Naming convention (matches Pine Script SMC):
+     *   'bullish' bucket  = RESISTANCE gap ABOVE market, created by a down-move.
+     *                       Condition: c[i-2].low > c[i].high
+     *                       Zone:  top = c[i-2].low, bottom = c[i].high
+     *                       Filled when any subsequent close >= bottom (price re-enters zone).
+     *
+     *   'bearish' bucket  = SUPPORT gap BELOW market, created by an up-move.
+     *                       Condition: c[i-2].high < c[i].low
+     *                       Zone:  top = c[i].low, bottom = c[i-2].high
+     *                       Filled when any subsequent close <= top (price re-enters zone).
+     *
+     * @param  array $ohlcv Array of OHLCV candles (oldest → newest)
+     * @return array        ['bullish' => [...zones], 'bearish' => [...zones]]
+     */
     public function detectFVG(array $ohlcv): array
     {
         $bullishFVGs = [];
@@ -258,34 +275,52 @@ class IndicatorService
             return ['bullish' => [], 'bearish' => []];
         }
 
-        for ($i = 2; $i < $count; $i++) {
-            $c0 = $ohlcv[$i];       // Current candle
-            $c2 = $ohlcv[$i - 2];   // 2 candles ago
+        $closes = array_column($ohlcv, 'close');
 
-            // Bullish FVG: gap exists where low of 2-bar-ago > high of current
+        for ($i = 2; $i < $count; $i++) {
+            $c0 = $ohlcv[$i];
+            $c2 = $ohlcv[$i - 2];
+
+            // Resistance FVG (stored as 'bullish'): gap above market, created by down-move.
+            // c[i-2].low > c[i].high — gap between c0.high and c2.low, above current candle.
             if ((float) $c2['low'] > (float) $c0['high']) {
+                $top    = (float) $c2['low'];
+                $bot    = (float) $c0['high'];
+                $filled = false;
+                for ($j = $i + 1; $j < $count; $j++) {
+                    // Filled once any close re-enters the zone from below
+                    if ((float) $closes[$j] >= $bot) { $filled = true; break; }
+                }
                 $bullishFVGs[] = [
-                    'top'    => (float) $c2['low'],
-                    'bottom' => (float) $c0['high'],
-                    'mid'    => ((float) $c2['low'] + (float) $c0['high']) / 2,
+                    'top'    => $top,
+                    'bottom' => $bot,
+                    'mid'    => ($top + $bot) / 2,
                     'index'  => $i,
-                    'filled' => false,
+                    'filled' => $filled,
                 ];
             }
 
-            // Bearish FVG: gap exists where high of 2-bar-ago < low of current
+            // Support FVG (stored as 'bearish'): gap below market, created by up-move.
+            // c[i-2].high < c[i].low — gap between c2.high and c0.low, below current candle.
             if ((float) $c2['high'] < (float) $c0['low']) {
+                $top    = (float) $c0['low'];
+                $bot    = (float) $c2['high'];
+                $filled = false;
+                for ($j = $i + 1; $j < $count; $j++) {
+                    // Filled once any close re-enters the zone from above
+                    if ((float) $closes[$j] <= $top) { $filled = true; break; }
+                }
                 $bearishFVGs[] = [
-                    'top'    => (float) $c0['low'],
-                    'bottom' => (float) $c2['high'],
-                    'mid'    => ((float) $c0['low'] + (float) $c2['high']) / 2,
+                    'top'    => $top,
+                    'bottom' => $bot,
+                    'mid'    => ($top + $bot) / 2,
                     'index'  => $i,
-                    'filled' => false,
+                    'filled' => $filled,
                 ];
             }
         }
 
-        // Return most recent 3 FVGs of each type
+        // Return most recent 3 unfilled FVGs of each type, newest first
         return [
             'bullish' => array_slice(array_reverse($bullishFVGs), 0, 3),
             'bearish' => array_slice(array_reverse($bearishFVGs), 0, 3),

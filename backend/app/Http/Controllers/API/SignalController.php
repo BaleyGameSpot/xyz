@@ -149,23 +149,42 @@ class SignalController extends Controller
         }
 
         try {
-            $signal = $this->signalService->generateSignal($pair, $request->timeframe);
+            // Find the nearest active zone (Volumetric OB or FVG) and create a limit order.
+            // BOS/CHoCH market-execution signals are intentionally excluded here.
+            $result = $this->signalService->generateOBFVGSignal($pair, $request->timeframe);
 
-            if (! $signal) {
+            if ($result) {
+                $result->load('tradingPair');
+                $zoneType = $result->reason['zone_type'] ?? 'Limit Order';
+
                 return response()->json([
                     'success' => true,
-                    'message' => 'Analysis complete. No signal conditions met at this time.',
-                    'data'    => null,
+                    'message' => "{$result->signal_type} Limit generated. Zone Type: {$zoneType}",
+                    'data'    => $result,
+                ], 201);
+            }
+
+            // No new signal generated — return the most recent existing pending/active signal
+            $existing = Signal::with('tradingPair')
+                ->where('trading_pair_id', $pair->id)
+                ->where('timeframe', $request->timeframe)
+                ->whereIn('status', ['pending', 'active'])
+                ->latest()
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No new signal generated. Returning existing active signal for this pair.',
+                    'data'    => $existing,
                 ]);
             }
 
-            $signal->load('tradingPair');
-
             return response()->json([
                 'success' => true,
-                'message' => "Signal generated: {$signal->signal_type}",
-                'data'    => $signal,
-            ], 201);
+                'message' => 'Analysis complete. No signal conditions met at this time.',
+                'data'    => null,
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
