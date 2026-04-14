@@ -413,11 +413,11 @@ class SignalGenerationService
             foreach ($bullishOBs as $ob) {
                 $entry = $ob['high'];
                 if ($entry >= $currentClose) continue; // zone must be below current price
-                // Mitigation (Middle mode): skip if any close after OB formation
-                // went below the OB midpoint — zone was already used.
+                // Mitigation (Absolute mode): skip only if a close completely went through
+                // the zone (below ob.low). Pullbacks inside the zone do NOT invalidate it.
                 $mitigated = false;
                 for ($k = $ob['index'] + 1; $k < $count; $k++) {
-                    if ((float) $closes[$k] < $ob['mid']) { $mitigated = true; break; }
+                    if ((float) $closes[$k] < $ob['low']) { $mitigated = true; break; }
                 }
                 if ($mitigated) continue;
                 $sl   = $ob['low'] - ($atr * 0.3);
@@ -439,11 +439,11 @@ class SignalGenerationService
             foreach ($bearishOBs as $ob) {
                 $entry = $ob['low'];
                 if ($entry <= $currentClose) continue; // zone must be above current price
-                // Mitigation (Middle mode): skip if any close after OB formation
-                // went above the OB midpoint — zone was already used.
+                // Mitigation (Absolute mode): skip only if a close completely went through
+                // the zone (above ob.high). Pullbacks inside the zone do NOT invalidate it.
                 $mitigated = false;
                 for ($k = $ob['index'] + 1; $k < $count; $k++) {
-                    if ((float) $closes[$k] > $ob['mid']) { $mitigated = true; break; }
+                    if ((float) $closes[$k] > $ob['high']) { $mitigated = true; break; }
                 }
                 if ($mitigated) continue;
                 $sl   = $ob['high'] + ($atr * 0.3);

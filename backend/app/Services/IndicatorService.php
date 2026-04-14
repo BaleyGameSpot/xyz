@@ -257,12 +257,14 @@ class IndicatorService
      *   'bullish' bucket  = RESISTANCE gap ABOVE market, created by a down-move.
      *                       Condition: c[i-2].low > c[i].high
      *                       Zone:  top = c[i-2].low, bottom = c[i].high
-     *                       Filled when any subsequent close >= bottom (price re-enters zone).
+     *                       Filled (Absolute): any subsequent close > top (price closed
+     *                       completely through the entire resistance zone).
      *
      *   'bearish' bucket  = SUPPORT gap BELOW market, created by an up-move.
      *                       Condition: c[i-2].high < c[i].low
      *                       Zone:  top = c[i].low, bottom = c[i-2].high
-     *                       Filled when any subsequent close <= top (price re-enters zone).
+     *                       Filled (Absolute): any subsequent close < bottom (price closed
+     *                       completely through the entire support zone).
      *
      * @param  array $ohlcv Array of OHLCV candles (oldest → newest)
      * @return array        ['bullish' => [...zones], 'bearish' => [...zones]]
@@ -290,8 +292,8 @@ class IndicatorService
                 $bot    = (float) $c0['high'];
                 $filled = false;
                 for ($j = $i + 1; $j < $count; $j++) {
-                    // Filled once any close re-enters the zone from below
-                    if ((float) $closes[$j] >= $bot) { $filled = true; break; }
+                    // Absolute fill: close went completely through the resistance zone
+                    if ((float) $closes[$j] > $top) { $filled = true; break; }
                 }
                 $bullishFVGs[] = [
                     'top'    => $top,
@@ -309,8 +311,8 @@ class IndicatorService
                 $bot    = (float) $c2['high'];
                 $filled = false;
                 for ($j = $i + 1; $j < $count; $j++) {
-                    // Filled once any close re-enters the zone from above
-                    if ((float) $closes[$j] <= $top) { $filled = true; break; }
+                    // Absolute fill: close went completely through the support zone
+                    if ((float) $closes[$j] < $bot) { $filled = true; break; }
                 }
                 $bearishFVGs[] = [
                     'top'    => $top,
@@ -322,10 +324,12 @@ class IndicatorService
             }
         }
 
-        // Return most recent 3 unfilled FVGs of each type, newest first
+        // Return most recent 10 FVGs of each type (newest first).
+        // A wider window gives the candidate loop a better chance of finding
+        // an unmitigated zone on the correct side of current price.
         return [
-            'bullish' => array_slice(array_reverse($bullishFVGs), 0, 3),
-            'bearish' => array_slice(array_reverse($bearishFVGs), 0, 3),
+            'bullish' => array_slice(array_reverse($bullishFVGs), 0, 10),
+            'bearish' => array_slice(array_reverse($bearishFVGs), 0, 10),
         ];
     }
 
