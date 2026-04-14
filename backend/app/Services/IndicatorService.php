@@ -235,8 +235,10 @@ class IndicatorService
             }
         }
 
-        // Return the 3 most recent order blocks
-        return array_slice(array_reverse($orderBlocks), 0, 3);
+        // Return up to 10 most recent order blocks (newest first)
+        // More candidates gives the signal generator a wider search window
+        // to find an unmitigated zone on the correct side of current price.
+        return array_slice(array_reverse($orderBlocks), 0, 10);
     }
 
     /**

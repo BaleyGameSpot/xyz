@@ -386,21 +386,19 @@ class SignalGenerationService
                 'atr'          => $atr,
             ]);
 
-            // ── Detect valid BOS/CHoCH-linked OBs ────────────────────────────
-            $bullishOBs = ($h1Trend !== 'bearish')
-                ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bullish')
-                : [];
-            $bearishOBs = ($h1Trend !== 'bullish')
-                ? $this->indicatorService->detectOrderBlocks($ohlcv, 'bearish')
-                : [];
+            // ── Detect OBs — always scan both directions ──────────────────────
+            // MTF trend affects the confidence score only; it must not block
+            // detection entirely. Blocking by h1 trend caused zero candidates
+            // whenever the higher timeframe disagreed with any potential setup.
+            $bullishOBs = $this->indicatorService->detectOrderBlocks($ohlcv, 'bullish');
+            $bearishOBs = $this->indicatorService->detectOrderBlocks($ohlcv, 'bearish');
+            $closes     = array_column($ohlcv, 'close');
 
             Log::debug("OB signal [{$pair->symbol}/{$timeframe}]: OB detection result", [
-                'bullishOBs' => count($bullishOBs),
-                'bearishOBs' => count($bearishOBs),
-                'bullish_skipped' => $h1Trend === 'bearish' ? 'yes (h1 bearish)' : 'no',
-                'bearish_skipped' => $h1Trend === 'bullish' ? 'yes (h1 bullish)' : 'no',
-                'first_bullish_ob' => $bullishOBs[0] ?? null,
-                'first_bearish_ob' => $bearishOBs[0] ?? null,
+                'bullishOBs'     => count($bullishOBs),
+                'bearishOBs'     => count($bearishOBs),
+                'first_bull_ob'  => $bullishOBs[0] ?? null,
+                'first_bear_ob'  => $bearishOBs[0] ?? null,
             ]);
 
             // ── Detect FVGs (needed for both candidates + confluence) ─────────
@@ -415,6 +413,13 @@ class SignalGenerationService
             foreach ($bullishOBs as $ob) {
                 $entry = $ob['high'];
                 if ($entry >= $currentClose) continue; // zone must be below current price
+                // Mitigation (Middle mode): skip if any close after OB formation
+                // went below the OB midpoint — zone was already used.
+                $mitigated = false;
+                for ($k = $ob['index'] + 1; $k < $count; $k++) {
+                    if ((float) $closes[$k] < $ob['mid']) { $mitigated = true; break; }
+                }
+                if ($mitigated) continue;
                 $sl   = $ob['low'] - ($atr * 0.3);
                 $risk = $entry - $sl;
                 if ($risk <= 0) continue;
@@ -428,13 +433,19 @@ class SignalGenerationService
                     'dir'       => 'bullish',
                     'proximity' => abs($entry - $currentClose),
                 ];
-                break; // only most-recent bullish OB
             }
 
             // SELL — Volumetric Order Block (supply zone above price)
             foreach ($bearishOBs as $ob) {
                 $entry = $ob['low'];
                 if ($entry <= $currentClose) continue; // zone must be above current price
+                // Mitigation (Middle mode): skip if any close after OB formation
+                // went above the OB midpoint — zone was already used.
+                $mitigated = false;
+                for ($k = $ob['index'] + 1; $k < $count; $k++) {
+                    if ((float) $closes[$k] > $ob['mid']) { $mitigated = true; break; }
+                }
+                if ($mitigated) continue;
                 $sl   = $ob['high'] + ($atr * 0.3);
                 $risk = $sl - $entry;
                 if ($risk <= 0) continue;
@@ -448,7 +459,6 @@ class SignalGenerationService
                     'dir'       => 'bearish',
                     'proximity' => abs($entry - $currentClose),
                 ];
-                break; // only most-recent bearish OB
             }
 
             // BUY — Fair Value Gap (support gap below price, stored in 'bearish' bucket)
@@ -470,7 +480,6 @@ class SignalGenerationService
                     'dir'       => 'bullish',
                     'proximity' => abs($entry - $currentClose),
                 ];
-                break; // only most-recent unfilled support FVG
             }
 
             // SELL — Fair Value Gap (resistance gap above price, stored in 'bullish' bucket)
@@ -492,7 +501,6 @@ class SignalGenerationService
                     'dir'       => 'bearish',
                     'proximity' => abs($entry - $currentClose),
                 ];
-                break; // only most-recent unfilled resistance FVG
             }
 
             if (empty($candidates)) {

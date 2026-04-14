@@ -165,10 +165,12 @@ class SignalController extends Controller
             }
 
             // No new signal generated — return the most recent existing pending/active signal
+            // that has not yet expired (guards against returning stale 8-day-old signals).
             $existing = Signal::with('tradingPair')
                 ->where('trading_pair_id', $pair->id)
                 ->where('timeframe', $request->timeframe)
                 ->whereIn('status', ['pending', 'active'])
+                ->where('expires_at', '>', now())
                 ->latest()
                 ->first();
 
